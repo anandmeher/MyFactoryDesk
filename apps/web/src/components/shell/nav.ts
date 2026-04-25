@@ -20,7 +20,7 @@ export type NavItem = {
 export const NAV: ReadonlyArray<NavItem> = [
   { to: '/dashboard', label: 'Dashboard', icon: Home },
   { to: '/employees', label: 'Employees', icon: Users },
-  { to: '/attendance', label: 'Attendance', icon: CalendarDays, soon: true },
-  { to: '/advances', label: 'Advances', icon: Wallet, soon: true },
-  { to: '/payroll', label: 'Payroll', icon: Receipt, soon: true },
+  { to: '/attendance', label: 'Attendance', icon: CalendarDays },
+  { to: '/advances', label: 'Advances', icon: Wallet },
+  { to: '/payroll', label: 'Payroll', icon: Receipt },
 ]

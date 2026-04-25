@@ -2,6 +2,16 @@ import { QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { queryClient } from '@/lib/queryClient'
+import { AdvancesList } from '@/features/advances/AdvancesList'
+import { EditAdvance } from '@/features/advances/EditAdvance'
+import { NewAdvance } from '@/features/advances/NewAdvance'
+import { AttendanceCalendar } from '@/features/attendance/AttendanceCalendar'
+import { AttendanceDailyMark } from '@/features/attendance/AttendanceDailyMark'
+import { AttendanceSummary } from '@/features/attendance/AttendanceSummary'
+import { NewPayrollRun } from '@/features/payroll/NewPayrollRun'
+import { PayrollList } from '@/features/payroll/PayrollList'
+import { PayrollRunDetail } from '@/features/payroll/PayrollRunDetail'
+import { PayslipDetail } from '@/features/payroll/PayslipDetail'
 import { EmployeeDetail } from '@/features/employees/EmployeeDetail'
 import { EmployeesList } from '@/features/employees/EmployeesList'
 import { NewEmployee } from '@/features/employees/NewEmployee'
@@ -51,34 +61,82 @@ export function App() {
             }
           />
           <Route
-            path="/attendance/*"
+            path="/attendance"
             element={
               <RequireAuth>
-                <Placeholder title="Attendance" />
+                <AttendanceDailyMark />
               </RequireAuth>
             }
           />
           <Route
-            path="/advances/*"
+            path="/attendance/summary"
             element={
               <RequireAuth>
-                <Placeholder title="Advances" />
+                <AttendanceSummary />
               </RequireAuth>
             }
           />
           <Route
-            path="/payroll/*"
+            path="/attendance/calendar/:employeeId"
             element={
               <RequireAuth>
-                <Placeholder title="Payroll" />
+                <AttendanceCalendar />
               </RequireAuth>
             }
           />
           <Route
-            path="/payslips/*"
+            path="/advances"
             element={
               <RequireAuth>
-                <Placeholder title="Payslip" />
+                <AdvancesList />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/advances/new"
+            element={
+              <RequireAuth>
+                <NewAdvance />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/advances/:id/edit"
+            element={
+              <RequireAuth>
+                <EditAdvance />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/payroll"
+            element={
+              <RequireAuth>
+                <PayrollList />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/payroll/new"
+            element={
+              <RequireAuth>
+                <NewPayrollRun />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/payroll/:id"
+            element={
+              <RequireAuth>
+                <PayrollRunDetail />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/payslips/:id"
+            element={
+              <RequireAuth>
+                <PayslipDetail />
               </RequireAuth>
             }
           />

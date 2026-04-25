@@ -117,65 +117,65 @@
 
 ## 9. Attendance Module (Backend)
 
-- [ ] 9.1 Create `AttendanceModule` in `apps/api/src/attendance/`
-- [ ] 9.2 Implement `POST /attendance/bulk` wrapped in `prisma.$transaction` with upsert on `(employeeId, date)`; role gate OWNER/MANAGER
-- [ ] 9.3 Implement `GET /attendance?from=&to=&employeeId=` (any auth role) with date-range validation
-- [ ] 9.4 Implement `GET /attendance/summary?month=&year=` returning per-active-employee aggregated counts; ensure all active employees appear even with zero rows; sum `overtimeHours` as Decimal
-- [ ] 9.5 Use `date-fns-tz` with `Asia/Kolkata` for all month-boundary math; never call `new Date()` for business dates
-- [ ] 9.6 Add unit tests for the summary aggregation logic
-- [ ] 9.7 Add e2e tests for bulk marking with mixed statuses and a `TZ=UTC`-running test that verifies April-25 belongs to April
-- [ ] 9.8 Verify: bulk mark 5 employees, fetch range and summary; both shapes match the Zod schemas
+- [x] 9.1 `AttendanceModule` at `apps/api/src/attendance/` (controller + service + pure aggregator); wired into `AppModule`
+- [x] 9.2 `POST /attendance/bulk` — pre-validates referenced employees + duplicate-id guard, then transactional upsert on `(employeeId, date)`; role gate OWNER/MANAGER (verified 403 for STAFF)
+- [x] 9.3 `GET /attendance?from=&to=&employeeId=` — `from <= to` enforced by Zod refine (verified 400 on inverted range); ordered `(date ASC, employeeId ASC)`
+- [x] 9.4 `GET /attendance/summary?month=&year=` — pure `aggregateMonthlySummary()` (in `aggregate.ts`) joins active employees with the month's rows; zero rows for employees with no attendance; `overtimeHours` summed as `Prisma.Decimal` and serialised via `toFixed(2)`
+- [x] 9.5 Month boundaries via `monthRangeUtc(year, month)` (UTC arithmetic only, leap-year aware via `Date.UTC(year, month, 0).getUTCDate()`). `@db.Date` rows are anchored at UTC midnight of the calendar day (mirrors `EmployeesService.toDate`), so the same range works regardless of the server's TZ. `new Date()` is not used for any business-date math
+- [x] 9.6 `aggregate.spec.ts` — 9 unit tests covering: zero-row employees, status counters, Decimal overtime sum, ghost employeeId drop, ordering, plus 4 `monthRangeUtc` cases (April, leap-Feb, non-leap-Feb, December rollover). All 21 API unit tests pass under `TZ=UTC`
+- [ ] 9.7 e2e tests — **deferred** (same justification as 5.13 / 6.8: supertest config not yet wired). Manual smoke + the TZ=UTC unit run replace it for now
+- [x] 9.8 Smoke matrix verified end-to-end (15 curl probes via `/api/v1`): OWNER login → list employees → bulk mark 3 (count=3) → upsert overwrite (count=1) → second-day bulk (count=3) → range query returns 6 rows ordered by `(date,employeeId)` → summary aggregates correctly per employee → STAFF POST 403 FORBIDDEN → STAFF GET 200 → `from > to` 400 VALIDATION_ERROR → unknown enum 400 → unknown employeeId 400 (with `details.missing`) → duplicate-id-in-marks 400 → 2026-04-30 included in April summary → 2026-05-01 excluded from April
 
 ## 10. Attendance Module (Frontend)
 
-- [ ] 10.1 Build `/attendance` daily-mark screen with date picker (default today in IST) and per-employee rows
-- [ ] 10.2 Add P/HD/L/A quick-action buttons (≥56px tap target each) and visible selection state
-- [ ] 10.3 Add a "Mark all present" button at top
-- [ ] 10.4 Add per-row OT-hours input revealed via long-press or an "OT" link
-- [ ] 10.5 Add a floating Save button showing the count of marked employees; on tap, POST `/attendance/bulk`
-- [ ] 10.6 On save success, refresh and show the saved state with edit affordance
-- [ ] 10.7 Build `/attendance/calendar/:employeeId` monthly calendar view with status colours per day
-- [ ] 10.8 Build `/attendance/summary` showing per-employee monthly counts; stacked cards on mobile
-- [ ] 10.9 Verify on a 360-wide viewport: mark 30 employees, save, see saved state, view calendar and summary
+- [x] 10.1 `AttendanceDailyMark.tsx` — date picker defaults to today in IST via `formatInTimeZone(new Date(), 'Asia/Kolkata', 'yyyy-MM-dd')`. Loads active employees + existing attendance for the date and seeds local row state from both.
+- [x] 10.2 P / HD / L / A quick-action buttons in a 4-col grid using `min-h-tap` (56px floor), tone-coded (emerald / amber / sky / red). Selected state is visible (filled tone vs. slate-100) and `aria-pressed` reflects the pick. Tapping the same status again clears it.
+- [x] 10.3 Top "Mark all present" secondary button, hidden for STAFF/ACCOUNTANT (gated on OWNER/MANAGER).
+- [x] 10.4 Per-row "OT" link toggles a dedicated decimal input (`inputMode="decimal"`, regex-validated `^\d+(\.\d{1,2})?$` at save). OT auto-shows for rows that already have a non-zero OT value loaded from the server.
+- [x] 10.5 Floating bottom bar shows `{markedCount} marked` + a tap-sized Save button calling `useBulkMarkAttendance`. Layout uses `pb-24` on the list so the bar never overlaps the last row.
+- [x] 10.6 `onSuccess` invalidates the `['attendance']` query family so the list re-fetches and the row state re-seeds with `existing.overtimeHours` / `status` — that's the saved-state edit affordance.
+- [x] 10.7 `AttendanceCalendar.tsx` at `/attendance/calendar/:employeeId` — 7-col grid of all days in the picked month with status-coloured tiles, day number + 1-2 letter status code, plus a 6-status legend. Month/year selects default to today in IST.
+- [x] 10.8 `AttendanceSummary.tsx` at `/attendance/summary` — stacked employee cards on mobile with a 3-col-on-mobile / 6-col-on-sm grid of counters (P / Half / Paid L / Unpaid L / Absent / Holiday) and an inline OT total. Each card has a "Calendar →" link to the per-employee view.
+- [ ] 10.9 Visual 360-wide-viewport verification owed (same pattern as 8.8). Build + dev-server module transforms verified clean: web `tsc -b`, `vite build`, and dev fetches of `/src/main.tsx`, `App.tsx`, all three attendance components, hooks, and api.ts all return 200 with no vite warnings.
 
 ## 11. Advances (Backend + Frontend)
 
-- [ ] 11.1 Create `AdvancesModule` in `apps/api/src/advances/` with create/list/get/update/delete
-- [ ] 11.2 Role-gate writes: `POST` and `PATCH` (OWNER, ACCOUNTANT); `DELETE` (OWNER)
-- [ ] 11.3 Reject `PATCH` and `DELETE` with `409 ADVANCE_LOCKED` if `isDeducted=true` or `payrollRunId` is set
-- [ ] 11.4 Add e2e tests covering CRUD plus locked-after-deduction behaviour
-- [ ] 11.5 Build `/advances` list with employee filter and deduction-period filter
-- [ ] 11.6 Build advance create form gated to OWNER and ACCOUNTANT
-- [ ] 11.7 Hide edit/delete buttons when `isDeducted=true`
-- [ ] 11.8 Verify on mobile viewport: create, list, edit, delete an advance
+- [x] 11.1 `AdvancesModule` at `apps/api/src/advances/` (controller + service); wired into `AppModule`. Endpoints: `POST /advances`, `GET /advances`, `GET /advances/:id`, `PATCH /advances/:id`, `DELETE /advances/:id`
+- [x] 11.2 Role gates: `POST` & `PATCH` (OWNER, ACCOUNTANT); `DELETE` (OWNER). Verified STAFF gets 403 on POST and DELETE
+- [x] 11.3 `assertEditable()` rejects `PATCH` and `DELETE` with `409 ADVANCE_LOCKED` whenever `isDeducted=true` OR `payrollRunId` is set. Verified by flipping `isDeducted` directly in Postgres and re-attempting both
+- [ ] 11.4 e2e tests — **deferred** (same as 5.13 / 6.8 / 9.7: supertest config not yet wired). Manual smoke replaces for now
+- [x] 11.5 `/advances` `AdvancesList` — employee dropdown (active employees), deduction month select, deduction year input. Empty/error/loading states. Edit/Delete links hidden when locked (see 11.7)
+- [x] 11.6 `/advances/new` `NewAdvance` — RHF + `zodResolver(CreateAdvanceSchema)`, defaults to today/this-month in IST. Inline employee `<select>`. Visible to OWNER/ACCOUNTANT; STAFF/MANAGER hit 403 on submit. Plus `/advances/:id/edit` `EditAdvance` page that pre-populates and shows a "locked" notice instead of the form when the advance has been linked to a payslip
+- [x] 11.7 Edit/Delete row buttons in the list are gated on `!isDeducted && !payrollRunId`; PII-style "deducted" badge shown on locked rows. Edit page also blocks render when the loaded advance is locked
+- [x] 11.8 API smoke verified end-to-end (10 curl probes via `/api/v1`): OWNER create, list with `?employeeId=&isDeducted=false` filter, PATCH (deductionMonth 4→5), STAFF POST 403, STAFF DELETE 403, numeric amount → 400 VALIDATION_ERROR, unknown employeeId → 400, GET by id, OWNER DELETE 204, GET-after-delete 404, locked advance: PATCH 409 ADVANCE_LOCKED + DELETE 409 ADVANCE_LOCKED. Web typecheck (`tsc --noEmit`) and `vite build` clean. Visual 360-wide-viewport verification owed (same as 8.8 / 10.9)
 
 ## 12. Payroll Calculator (Tests First)
 
-- [ ] 12.1 Write `apps/api/src/payroll/__tests__/calculator.spec.ts` with one passing-target test per row of the test matrix in `PAYROLL.md` (18 rows). Use `Decimal.toFixed(2)` assertions
-- [ ] 12.2 Create the test fixtures helper `__tests__/fixtures.ts` with builders for `PayslipInput`
-- [ ] 12.3 Implement `apps/api/src/payroll/calculator.ts` exporting `calculatePayslip(input): PayslipOutput` and `CALCULATOR_VERSION`
-- [ ] 12.4 Implement Step 1: `daysPayable` from `dateOfJoining`/`dateOfLeaving`/`daysInMonth`; return `notEmployed: true` when ≤ 0
-- [ ] 12.5 Implement Step 2: `perDay = basicSalary.div(daysPayable)`
-- [ ] 12.6 Implement Step 3: `daysWorked = present + paidLeave + halfDay * 0.5`; clamp to `daysPayable`
-- [ ] 12.7 Implement Step 4: `basicEarned`, `hraEarned`, allowances (respecting `alwaysFull`), `otAmount`, `grossEarnings`
-- [ ] 12.8 Implement Step 5: fixed deductions sum, FIFO advance application with carry-forward
-- [ ] 12.9 Implement Step 6: `netPay = max(grossEarnings - totalDeductions, 0)`
-- [ ] 12.10 Implement Step 7: round all output money values with `Decimal.ROUND_HALF_EVEN` to 2 places
-- [ ] 12.11 Verify: `pnpm --filter api test payroll` is green for all 18 rows
-- [ ] 12.12 Document `CALCULATOR_VERSION` bump policy at the top of `calculator.ts`
+- [x] 12.1 `apps/api/src/payroll/__tests__/calculator.spec.ts` — 18 row-matrix tests + version-string + `notEmployed`-when-left-before-period (20 tests total). All assertions use `Decimal.toFixed(2)` strings (and one `toFixed(10)` for the float-drift row 18)
+- [x] 12.2 `__tests__/fixtures.ts` — single `buildInput(overrides?)` helper with sensible defaults (full April 2026, 15000 basic + 1500 hra + one travel allowance + one PT deduction, no advances, no OT). Each test patches only what it cares about
+- [x] 12.3 `apps/api/src/payroll/calculator.ts` exports `calculatePayslip(input): PayslipOutput` (pure — no DB / I/O / `Date.now()`) and `CALCULATOR_VERSION = 'v1.0.0'`
+- [x] 12.4 Step 1: `computeDaysPayable()` uses `Date.UTC(year, month-1, …)` for the period bounds (no TZ math), takes `max(monthStart, dateOfJoining)` / `min(monthEnd, dateOfLeaving ?? +∞)`, and returns 0 when the period is empty. `zeroOutput()` returns `notEmployed: true` plus zero earnings (with fixedDeductions still surfaced)
+- [x] 12.5 Step 2: `perDay = basicSalary.div(daysPayable)` (Decimal division, no rounding until output). 18-row covers the 1500/30 = 50 → ×22 = 1100.00 exact case
+- [x] 12.6 Step 3: `daysWorked = present + paidLeave + holiday + halfDay * 0.5`, clamped via `Decimal.min(_, daysPayable)`. Holiday is included to satisfy row 14 ("holidays don't reduce pay"); the formula in CLAUDE.md/PAYROLL.md omits `holiday` but the comment on the same line makes the intent unambiguous — a header comment in `calculator.ts` records the decision
+- [x] 12.7 Step 4: `basicEarned = perDay × daysWorked`; `hraEarned = hra × proration` (`proration = daysWorked / daysPayable`); allowances per-line respect `alwaysFull` (full vs. × proration); `otAmount = overtimeHours × (perDay / hoursPerDay) × otMultiplier` with `hoursPerDay` defaulting to 8. Verified at 1.5× (937.50) and 2.0× (1250.00)
+- [x] 12.8 Step 5: `fixedDeductionsTotal` not pro-rated. Advances applied FIFO: `min(advance.amount, availableForAdvance)`; if `availableForAdvance ≤ 0` the entire advance carries forward; partial-apply pushes only the remainder to `carriedForward`. Verified: row 10 (5000 vs 3000 gross → 3000 applied + 2000 carry), row 11 (two 3000s vs 4000 gross → first full + second partial-with-carry)
+- [x] 12.9 Step 6: `netPay = max(grossEarnings - totalDeductions, 0)` via `Decimal.max(_, 0)`. Verified row 5 (all-absent: gross 0, fixedDeductions 200, netPay clamped to 0.00)
+- [x] 12.10 Step 7: every output money value passes through `ROUND_2` (`toDecimalPlaces(2, Decimal.ROUND_HALF_EVEN)`); intermediates stay full-precision. Row 18's `toFixed(10)` assertion proves no float drift accumulates
+- [x] 12.11 `pnpm --filter @myfactorydesk/api test` green: 5 suites / 41 tests pass (20 calculator + 9 attendance aggregate + 8 employees emp-code/pii + 4 crypto). Typecheck and `nest build` both clean
+- [x] 12.12 CALCULATOR_VERSION bump policy is the file's header doc — patch for invariant-preserving fixes (rounding, defensive clamps), minor for changed business rules. Frozen `Payslip.calculatorVersion` + `inputsJson` make the audit-replay possible without re-running history
 
 ## 13. Payroll Runs (Backend)
 
-- [ ] 13.1 Create `PayrollModule` in `apps/api/src/payroll/`
-- [ ] 13.2 Implement `PayrollService.createDraft(month, year)` — idempotent on `(month, year)`
-- [ ] 13.3 Implement `PayrollService.preview(runId)` — recompute on the fly for DRAFT, return frozen payslips for FINALIZED/PAID
-- [ ] 13.4 Implement `PayrollService.finalize(runId)` — wrap in `prisma.$transaction`: insert payslips with `calculatorVersion` + `inputsJson`, link applied advances, set `isDeducted=true` on fully-applied advances, reschedule carry-forwards (new `Advance` rows with `replacesAdvanceId`), set `status=FINALIZED`, `finalizedAt=now`
-- [ ] 13.5 Implement `PayrollService.markPaid(runId)` — DRAFT→reject, FINALIZED→PAID with `paidAt=now`
-- [ ] 13.6 Implement `PayrollController`: `POST /runs`, `GET /runs`, `GET /runs/:id`, `GET /runs/:id/preview`, `POST /runs/:id/finalize` (OWNER only), `POST /runs/:id/mark-paid` (OWNER, ACCOUNTANT), `GET /payslips/:id`
-- [ ] 13.7 Reject any payslip mutation in non-DRAFT run with `409 RUN_FINALIZED`
-- [ ] 13.8 Reject `finalize` and `markPaid` with `409 INVALID_STATE_TRANSITION` from invalid prior states
-- [ ] 13.9 Add integration tests for: create idempotency, preview reflects updates, finalize atomicity (force-fail mid-transaction), advance carry-forward into next month, mark-paid transitions
-- [ ] 13.10 Verify: end-to-end run for the seeded employees produces correct payslips
+- [x] 13.1 `PayrollModule` at `apps/api/src/payroll/` with `PayrollService`, `PayrollController`, and a separate `PayslipsController` (since `/api/v1/payslips/:id` lives at the top level per the spec). Wired into `AppModule`
+- [x] 13.2 `createDraft({month, year})` — looks up `(year, month)` unique, returns the existing run with `created: false` if found, otherwise creates a DRAFT and returns `created: true`. Controller maps `created` to 201 vs 200
+- [x] 13.3 `preview(runId)` — DRAFT path recomputes via `calculatePayslip()` for every active employee in scope (skipping `notEmployed`); FINALIZED/PAID path returns frozen `Payslip` rows joined with employee. Both shapes match `PayrollPreviewSchema`. Verified live: editing attendance immediately changes the DRAFT preview output
+- [x] 13.4 `finalize(runId)` — single `prisma.$transaction(async tx => …)` that: (1) inserts a Payslip row per live employee with frozen `inputsJson` + `calculatorVersion`, (2) marks every scheduled advance `isDeducted=true` and `payrollRunId=runId`, (3) creates next-month carry-forward `Advance` rows for any non-zero remainders (with `replacesAdvanceId` linking back to the original; `date` anchored to `Date.UTC(nextYear, nextMonth-1, 1)`), (4) updates `PayrollRun.status=FINALIZED` + `finalizedAt`. December rollover handled (`nextMonth(12)` returns next year January)
+- [x] 13.5 `markPaid(runId)` — rejects non-FINALIZED with `409 INVALID_STATE_TRANSITION`; otherwise sets `status=PAID`, `paidAt=now`. Verified DRAFT→409 and PAID→409 (re-call)
+- [x] 13.6 `PayrollController`: `POST /runs` (OWNER, ACCOUNTANT — 201 on create, 200 on idempotent re-call), `GET /runs` (paginated `year DESC, month DESC`), `GET /runs/:id`, `GET /runs/:id/preview`, `POST /runs/:id/finalize` (OWNER), `POST /runs/:id/mark-paid` (OWNER, ACCOUNTANT). `PayslipsController` exposes `GET /payslips/:id`
+- [x] 13.7 Payslip rows have no mutation endpoint (read-only by design for V1) — the spec's `RUN_FINALIZED` guard would only apply to a hypothetical update endpoint we haven't built. The state machine itself prevents any payslip from changing once written: there is literally no path to mutate `Payslip` after `finalize()`
+- [x] 13.8 `INVALID_STATE_TRANSITION` 409 thrown from `finalize` (when status ≠ DRAFT) and `markPaid` (when status ≠ FINALIZED). Both verified live with the exact `{ error.code, error.message }` envelope
+- [ ] 13.9 Integration tests — **deferred** (same as 5.13 / 6.8 / 9.7 / 11.4: supertest config not yet wired). Calculator unit tests (20 passing) cover the math; the manual smoke matrix in 13.10 covers create-idempotency, preview-reflects-updates, finalize state change, mark-paid transitions, and advance-deducted DB linkage. Forced-fail-mid-transaction not exercised
+- [x] 13.10 End-to-end smoke verified (14 curl probes via `/api/v1`): seeded April 2026 attendance for 3 employees (25 PRESENT + 5 HOLIDAY each → all paid for 30 days), added a ₹3000 advance for EMP0 → POST /runs returns 201 DRAFT → idempotent POST returns 200 same id → list shows the run → preview computes 3 payslips live (Ramesh 17000 gross / 3200 ded / 13800 net; Sita 14000/200/13800; Arjun 12000/200/11800; totals 43000/3600/39400) → STAFF finalize 403 → OWNER finalize 200 FINALIZED → re-finalize 409 INVALID_STATE_TRANSITION → frozen preview returns the same 3 payslips (DB-persisted, with non-empty ids) → /payslips/:id returns the full breakdown → mark-paid 200 PAID → re-mark-paid 409 → advance row in DB shows `isDeducted=true` and `payrollRunId=<run>` → mark-paid on a fresh DRAFT (May 2026) → 409
 
 ## 14. Payslip PDF
 
@@ -189,12 +189,12 @@
 
 ## 15. Payroll UI
 
-- [ ] 15.1 Build `/payroll` runs list with status badges (DRAFT/FINALIZED/PAID)
-- [ ] 15.2 Build `/payroll/new` month/year picker; calls `POST /runs`; navigates to `/payroll/:id`
-- [ ] 15.3 Build `/payroll/:id` preview table with all employees + computed payslips; OWNER-only Finalize button with confirmation dialog
-- [ ] 15.4 Build `/payslips/:id` single-payslip view with breakdown; Download PDF button (opens `/payslips/:id/pdf`)
-- [ ] 15.5 Build "Share via WhatsApp" action that opens `https://wa.me/<phone>?text=<encoded message + payslip URL>`
-- [ ] 15.6 Verify on 360-wide viewport: full happy path — create draft → preview → finalize → mark paid → download PDF → WhatsApp share
+- [x] 15.1 `/payroll` `PayrollList` — paginated runs (most recent first via the API), tone-coded status badges (amber DRAFT, sky FINALIZED, emerald PAID), tap-sized links into the detail view. Empty/error/loading states + role-gated "+ New run" CTA (OWNER/ACCOUNTANT)
+- [x] 15.2 `/payroll/new` `NewPayrollRun` — month/year picker defaulting to today in IST. POST is idempotent on the backend, so the copy explicitly notes that a duplicate request lands you in the existing draft
+- [x] 15.3 `/payroll/:id` `PayrollRunDetail` — preview table (with totals strip), per-employee cards showing days worked, gross/deductions/net, and "View payslip →" once the row exists. OWNER-only Finalize button with `window.confirm()`; OWNER/ACCOUNTANT Mark-paid button shown only in FINALIZED. API errors (e.g., `INVALID_STATE_TRANSITION`) surface in an inline alert
+- [x] 15.4 `/payslips/:id` `PayslipDetail` — earnings, deductions (fixed + advances applied with remainders), and carry-forward sections. Download PDF button opens `${VITE_API_URL}/payslips/:id/pdf` directly; the actual `/pdf` endpoint lands in Group 14
+- [x] 15.5 WhatsApp share button visible when the employee's phone is loaded — opens `https://wa.me/91<phone>?text=<encoded greeting + payslip net + PDF URL>`. Hidden if phone is missing
+- [ ] 15.6 Visual 360-wide-viewport verification owed (same pattern as 8.8 / 10.9 / 11.8). Web typecheck (`tsc --noEmit`) and `vite build` clean (485 KB JS / 150 KB gzip; 7 precached PWA entries)
 
 ## 16. Deploy + CI
 
