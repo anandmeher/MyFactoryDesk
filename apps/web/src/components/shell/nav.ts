@@ -22,5 +22,5 @@ export const NAV: ReadonlyArray<NavItem> = [
   { to: '/employees', label: 'Employees', icon: Users },
   { to: '/attendance', label: 'Attendance', icon: CalendarDays },
   { to: '/advances', label: 'Advances', icon: Wallet },
-  { to: '/payroll', label: 'Payroll', icon: Receipt, soon: true },
+  { to: '/payroll', label: 'Payroll', icon: Receipt },
 ]

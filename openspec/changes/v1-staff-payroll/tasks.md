@@ -189,12 +189,12 @@
 
 ## 15. Payroll UI
 
-- [ ] 15.1 Build `/payroll` runs list with status badges (DRAFT/FINALIZED/PAID)
-- [ ] 15.2 Build `/payroll/new` month/year picker; calls `POST /runs`; navigates to `/payroll/:id`
-- [ ] 15.3 Build `/payroll/:id` preview table with all employees + computed payslips; OWNER-only Finalize button with confirmation dialog
-- [ ] 15.4 Build `/payslips/:id` single-payslip view with breakdown; Download PDF button (opens `/payslips/:id/pdf`)
-- [ ] 15.5 Build "Share via WhatsApp" action that opens `https://wa.me/<phone>?text=<encoded message + payslip URL>`
-- [ ] 15.6 Verify on 360-wide viewport: full happy path — create draft → preview → finalize → mark paid → download PDF → WhatsApp share
+- [x] 15.1 `/payroll` `PayrollList` — paginated runs (most recent first via the API), tone-coded status badges (amber DRAFT, sky FINALIZED, emerald PAID), tap-sized links into the detail view. Empty/error/loading states + role-gated "+ New run" CTA (OWNER/ACCOUNTANT)
+- [x] 15.2 `/payroll/new` `NewPayrollRun` — month/year picker defaulting to today in IST. POST is idempotent on the backend, so the copy explicitly notes that a duplicate request lands you in the existing draft
+- [x] 15.3 `/payroll/:id` `PayrollRunDetail` — preview table (with totals strip), per-employee cards showing days worked, gross/deductions/net, and "View payslip →" once the row exists. OWNER-only Finalize button with `window.confirm()`; OWNER/ACCOUNTANT Mark-paid button shown only in FINALIZED. API errors (e.g., `INVALID_STATE_TRANSITION`) surface in an inline alert
+- [x] 15.4 `/payslips/:id` `PayslipDetail` — earnings, deductions (fixed + advances applied with remainders), and carry-forward sections. Download PDF button opens `${VITE_API_URL}/payslips/:id/pdf` directly; the actual `/pdf` endpoint lands in Group 14
+- [x] 15.5 WhatsApp share button visible when the employee's phone is loaded — opens `https://wa.me/91<phone>?text=<encoded greeting + payslip net + PDF URL>`. Hidden if phone is missing
+- [ ] 15.6 Visual 360-wide-viewport verification owed (same pattern as 8.8 / 10.9 / 11.8). Web typecheck (`tsc --noEmit`) and `vite build` clean (485 KB JS / 150 KB gzip; 7 precached PWA entries)
 
 ## 16. Deploy + CI
 

@@ -8,6 +8,10 @@ import { NewAdvance } from '@/features/advances/NewAdvance'
 import { AttendanceCalendar } from '@/features/attendance/AttendanceCalendar'
 import { AttendanceDailyMark } from '@/features/attendance/AttendanceDailyMark'
 import { AttendanceSummary } from '@/features/attendance/AttendanceSummary'
+import { NewPayrollRun } from '@/features/payroll/NewPayrollRun'
+import { PayrollList } from '@/features/payroll/PayrollList'
+import { PayrollRunDetail } from '@/features/payroll/PayrollRunDetail'
+import { PayslipDetail } from '@/features/payroll/PayslipDetail'
 import { EmployeeDetail } from '@/features/employees/EmployeeDetail'
 import { EmployeesList } from '@/features/employees/EmployeesList'
 import { NewEmployee } from '@/features/employees/NewEmployee'
@@ -105,18 +109,34 @@ export function App() {
             }
           />
           <Route
-            path="/payroll/*"
+            path="/payroll"
             element={
               <RequireAuth>
-                <Placeholder title="Payroll" />
+                <PayrollList />
               </RequireAuth>
             }
           />
           <Route
-            path="/payslips/*"
+            path="/payroll/new"
             element={
               <RequireAuth>
-                <Placeholder title="Payslip" />
+                <NewPayrollRun />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/payroll/:id"
+            element={
+              <RequireAuth>
+                <PayrollRunDetail />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/payslips/:id"
+            element={
+              <RequireAuth>
+                <PayslipDetail />
               </RequireAuth>
             }
           />
