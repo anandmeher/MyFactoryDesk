@@ -151,18 +151,18 @@
 
 ## 12. Payroll Calculator (Tests First)
 
-- [ ] 12.1 Write `apps/api/src/payroll/__tests__/calculator.spec.ts` with one passing-target test per row of the test matrix in `PAYROLL.md` (18 rows). Use `Decimal.toFixed(2)` assertions
-- [ ] 12.2 Create the test fixtures helper `__tests__/fixtures.ts` with builders for `PayslipInput`
-- [ ] 12.3 Implement `apps/api/src/payroll/calculator.ts` exporting `calculatePayslip(input): PayslipOutput` and `CALCULATOR_VERSION`
-- [ ] 12.4 Implement Step 1: `daysPayable` from `dateOfJoining`/`dateOfLeaving`/`daysInMonth`; return `notEmployed: true` when ≤ 0
-- [ ] 12.5 Implement Step 2: `perDay = basicSalary.div(daysPayable)`
-- [ ] 12.6 Implement Step 3: `daysWorked = present + paidLeave + halfDay * 0.5`; clamp to `daysPayable`
-- [ ] 12.7 Implement Step 4: `basicEarned`, `hraEarned`, allowances (respecting `alwaysFull`), `otAmount`, `grossEarnings`
-- [ ] 12.8 Implement Step 5: fixed deductions sum, FIFO advance application with carry-forward
-- [ ] 12.9 Implement Step 6: `netPay = max(grossEarnings - totalDeductions, 0)`
-- [ ] 12.10 Implement Step 7: round all output money values with `Decimal.ROUND_HALF_EVEN` to 2 places
-- [ ] 12.11 Verify: `pnpm --filter api test payroll` is green for all 18 rows
-- [ ] 12.12 Document `CALCULATOR_VERSION` bump policy at the top of `calculator.ts`
+- [x] 12.1 `apps/api/src/payroll/__tests__/calculator.spec.ts` — 18 row-matrix tests + version-string + `notEmployed`-when-left-before-period (20 tests total). All assertions use `Decimal.toFixed(2)` strings (and one `toFixed(10)` for the float-drift row 18)
+- [x] 12.2 `__tests__/fixtures.ts` — single `buildInput(overrides?)` helper with sensible defaults (full April 2026, 15000 basic + 1500 hra + one travel allowance + one PT deduction, no advances, no OT). Each test patches only what it cares about
+- [x] 12.3 `apps/api/src/payroll/calculator.ts` exports `calculatePayslip(input): PayslipOutput` (pure — no DB / I/O / `Date.now()`) and `CALCULATOR_VERSION = 'v1.0.0'`
+- [x] 12.4 Step 1: `computeDaysPayable()` uses `Date.UTC(year, month-1, …)` for the period bounds (no TZ math), takes `max(monthStart, dateOfJoining)` / `min(monthEnd, dateOfLeaving ?? +∞)`, and returns 0 when the period is empty. `zeroOutput()` returns `notEmployed: true` plus zero earnings (with fixedDeductions still surfaced)
+- [x] 12.5 Step 2: `perDay = basicSalary.div(daysPayable)` (Decimal division, no rounding until output). 18-row covers the 1500/30 = 50 → ×22 = 1100.00 exact case
+- [x] 12.6 Step 3: `daysWorked = present + paidLeave + holiday + halfDay * 0.5`, clamped via `Decimal.min(_, daysPayable)`. Holiday is included to satisfy row 14 ("holidays don't reduce pay"); the formula in CLAUDE.md/PAYROLL.md omits `holiday` but the comment on the same line makes the intent unambiguous — a header comment in `calculator.ts` records the decision
+- [x] 12.7 Step 4: `basicEarned = perDay × daysWorked`; `hraEarned = hra × proration` (`proration = daysWorked / daysPayable`); allowances per-line respect `alwaysFull` (full vs. × proration); `otAmount = overtimeHours × (perDay / hoursPerDay) × otMultiplier` with `hoursPerDay` defaulting to 8. Verified at 1.5× (937.50) and 2.0× (1250.00)
+- [x] 12.8 Step 5: `fixedDeductionsTotal` not pro-rated. Advances applied FIFO: `min(advance.amount, availableForAdvance)`; if `availableForAdvance ≤ 0` the entire advance carries forward; partial-apply pushes only the remainder to `carriedForward`. Verified: row 10 (5000 vs 3000 gross → 3000 applied + 2000 carry), row 11 (two 3000s vs 4000 gross → first full + second partial-with-carry)
+- [x] 12.9 Step 6: `netPay = max(grossEarnings - totalDeductions, 0)` via `Decimal.max(_, 0)`. Verified row 5 (all-absent: gross 0, fixedDeductions 200, netPay clamped to 0.00)
+- [x] 12.10 Step 7: every output money value passes through `ROUND_2` (`toDecimalPlaces(2, Decimal.ROUND_HALF_EVEN)`); intermediates stay full-precision. Row 18's `toFixed(10)` assertion proves no float drift accumulates
+- [x] 12.11 `pnpm --filter @myfactorydesk/api test` green: 5 suites / 41 tests pass (20 calculator + 9 attendance aggregate + 8 employees emp-code/pii + 4 crypto). Typecheck and `nest build` both clean
+- [x] 12.12 CALCULATOR_VERSION bump policy is the file's header doc — patch for invariant-preserving fixes (rounding, defensive clamps), minor for changed business rules. Frozen `Payslip.calculatorVersion` + `inputsJson` make the audit-replay possible without re-running history
 
 ## 13. Payroll Runs (Backend)
 
