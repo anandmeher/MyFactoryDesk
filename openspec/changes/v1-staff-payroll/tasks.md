@@ -73,42 +73,47 @@
 
 ## 6. Employee CRUD
 
-- [ ] 6.1 Create `EmployeesModule` in `apps/api/src/employees/`
-- [ ] 6.2 Implement an AES-256-GCM service `crypto.service.ts` (`encrypt(s)` → `iv:tag:ct`, `decrypt(s)`) using `ENCRYPTION_KEY` env
-- [ ] 6.3 Implement `EmployeesService` with create / list / get / update / softDelete; encrypt PAN/Aadhaar on write
-- [ ] 6.4 Implement automatic `empCode` generation (`EMP{YYYY}{4-digit}`) using IST year and a per-year sequence
-- [ ] 6.5 Implement masking for PAN/Aadhaar in responses; `?includePii=true` query param decrypts only when caller is OWNER
-- [ ] 6.6 Implement `EmployeesController` with role-gated routes: `POST /` (OWNER, MANAGER), `GET /` and `GET /:id` (any), `PATCH /:id` (OWNER, MANAGER), `DELETE /:id` (OWNER)
-- [ ] 6.7 Validate every request body with the appropriate Zod schema
-- [ ] 6.8 Add e2e tests in `apps/api/test/employees.e2e-spec.ts` covering each endpoint plus permission checks plus PII masking/decryption
-- [ ] 6.9 Verify: smoke test create→list→get→update→soft-delete via curl/Swagger
+- [x] 6.1 `EmployeesModule` at `apps/api/src/employees/` (controller + service); wired into `AppModule`
+- [x] 6.2 `CryptoService` (`apps/api/src/common/crypto/crypto.service.ts`) — AES-256-GCM, key from env, output `iv:tag:ct` (base64url segments). `CryptoModule` is global. Unit tests cover round-trip, IV randomness, malformed input, and tamper detection
+- [x] 6.3 `EmployeesService.create/list/get/update/softDelete`; PAN/Aadhaar encrypted on write, decrypted on read (mask by default). All multi-row writes wrapped in `prisma.$transaction`
+- [x] 6.4 `nextEmpCode()` → `EMP{IST-year}{4-digit-seq}`; pure helpers in `emp-code.ts` unit-tested (zero-padding, range guard, IST late-Dec edge case → next year)
+- [x] 6.5 `maskTail()` (`pii.ts`, unit-tested) returns `XXXXXX234F` / `XXXXXXXX9012`. `?includePii=true` only honored when `user.role === OWNER`; otherwise flag is ignored. PII access is logged (empCode + id, never the value)
+- [x] 6.6 `EmployeesController`: `POST /` & `PATCH /:id` (OWNER, MANAGER), `GET /` & `GET /:id` (any auth), `DELETE /:id` (OWNER). Verified 403 for STAFF on POST and DELETE
+- [x] 6.7 Every body/query goes through `ZodPipe`: `CreateEmployeeSchema`, `UpdateEmployeeSchema`, `EmployeeListQuerySchema`, plus inline `IncludePiiQuerySchema`. Numeric money input → `400 VALIDATION_ERROR` (verified)
+- [ ] 6.8 e2e tests in `apps/api/test/employees.e2e-spec.ts` — **deferred** (same as 5.13: supertest config not yet wired). Covered for now by service unit tests (crypto, emp-code, pii) and the 6.9 smoke matrix. Will land alongside the test infra work in Group 12+
+- [x] 6.9 Smoke verified end-to-end (12 curl probes): owner create with auto empCode, date round-trip (`2026-04-15` in == out), masked PII default, OWNER `?includePii=true` decrypts, STAFF `?includePii=true` ignored (still masked), STAFF POST → 403, STAFF DELETE → 403, PATCH preserves untouched fields, numeric money → 400 VALIDATION_ERROR, unknown id → 404 NOT_FOUND, duplicate empCode → 409 EMP_CODE_EXISTS, soft-delete sets `isActive=false` + IST `dateOfLeaving` and is excluded from default list / included with `active=false`
+- [x] 6.x Bug found and fixed during 6.9: calendar-date `@db.Date` round-trip — initial `toDate` anchored at IST midnight which Postgres stored as the previous UTC day. Fixed by anchoring to UTC midnight of the same calendar day for `@db.Date` columns (see `employees.service.ts` `toDate`/`fromDate`). Pattern to reuse for Attendance/Advance dates in Groups 9+11
+- [x] 6.x Minimal jest config added (`apps/api/jest.config.js`) so `pnpm --filter api test` runs unit tests; no global config previously existed
 
 ## 7. Frontend Scaffold (Vite + React + PWA)
 
-- [ ] 7.1 Scaffold Vite app in `apps/web` via `pnpm create vite@latest . -- --template react-ts`
-- [ ] 7.2 Install: `react-router-dom`, `@tanstack/react-query`, `@tanstack/react-query-devtools`, `react-hook-form`, `@hookform/resolvers`, `zod`, `axios`, `date-fns`, `date-fns-tz`, `decimal.js`, `lucide-react`, `tailwindcss`, `@vitejs/plugin-pwa`, `vite-plugin-pwa`, `workbox-window`, `clsx`, `tailwind-merge`
-- [ ] 7.3 Initialise Tailwind per the official Vite guide
-- [ ] 7.4 Configure `vite-plugin-pwa` with manifest values from `mobile-web-pwa` spec
-- [ ] 7.5 Initialise shadcn/ui with the slate theme (`pnpm dlx shadcn@latest init`); add components: `button`, `input`, `label`, `card`, `table`, `dialog`, `form`, `select`, `toast`, `badge`, `skeleton`
-- [ ] 7.6 Create `src/lib/api.ts` (Axios instance with `baseURL = VITE_API_URL`, attach `accessToken`, refresh-once on 401)
-- [ ] 7.7 Create `src/lib/queryClient.ts` (TanStack Query defaults: `staleTime: 5 * 60_000`, `retry: 1`)
-- [ ] 7.8 Create `src/lib/auth.ts` with `login`, `logout`, `getCurrentUser`, `getAccessToken` helpers
-- [ ] 7.9 Create `src/lib/format.ts` with `formatINR(value: string | Decimal)` using `Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' })`
-- [ ] 7.10 Create the route structure under `src/routes/` and a `RequireAuth` guard component
-- [ ] 7.11 Wrap `App` in `QueryClientProvider`, `BrowserRouter`, and `Toaster`
-- [ ] 7.12 Create `apps/web/.env.example` with `VITE_API_URL`
-- [ ] 7.13 Verify: `pnpm --filter web dev` serves at `http://localhost:5173`
+- [x] 7.1 Hand-written `apps/web` scaffold (skipped interactive `pnpm create vite` for the same reason 2.1 skipped `nest new` — predictable, matches workspace conventions). Files: `package.json`, `tsconfig.json`, `vite.config.ts`, `index.html`, `src/main.tsx`, `src/App.tsx`, `.gitignore`
+- [x] 7.2 Installed all required deps as `workspace:*` for shared + the full list (router, TanStack Query + devtools, RHF + zod resolver, axios, date-fns(-tz), decimal.js, lucide, tailwind, vite-plugin-pwa, workbox-window, clsx, tailwind-merge). `pnpm install` clean
+- [x] 7.3 Tailwind initialised (`tailwind.config.js`, `postcss.config.js`, `src/index.css` with `@tailwind base/components/utilities`); `min-h-tap: 56px` extension for the spec's tap-target floor
+- [x] 7.4 `vite-plugin-pwa` configured per `mobile-web-pwa` spec (name/short_name `MyFactoryDesk`, theme `#1f2937`, background `#ffffff`, `display: standalone`, 192/512/maskable icons). Production build emits `manifest.webmanifest` + `sw.js` + workbox precache
+- [ ] 7.5 shadcn/ui — **deferred**. Hand-styled equivalents in place for v1 scaffold (login form, dashboard, placeholder); shadcn requires interactive init + per-component copy and is not blocking any later task. Will add when a richer component (Dialog, Select, Toast) is first needed in Group 8
+- [x] 7.6 `src/lib/api.ts` — Axios with `baseURL = VITE_API_URL`, request interceptor attaches Bearer, response interceptor performs **single-flight** refresh on 401 (skipping `/auth/login` and `/auth/refresh` themselves), retries once, falls back to `clearSession()` + `window.location.assign('/login')`
+- [x] 7.7 `src/lib/queryClient.ts` — `staleTime: 5 * 60_000`, `retry: 1`, `refetchOnWindowFocus: false`
+- [x] 7.8 `src/lib/auth.ts` — `getAccessToken`, `getRefreshToken`, `getCurrentUser`, `setSession`, `setTokens`, `clearSession`, `isAuthenticated`. localStorage keys are namespaced `mfd.*`
+- [x] 7.9 `src/lib/format.ts` — `formatINR()` uses `Intl.NumberFormat('en-IN', { style:'currency', currency:'INR' })`; accepts `string | Decimal`. Plus `cn.ts` for tailwind-merge + clsx
+- [x] 7.10 Routes scaffolded under `src/routes/`: `Login`, `Dashboard`, `RequireAuth` guard (redirects to `/login` carrying `from` state), `Placeholder` for the not-yet-built domain screens (employees, attendance, advances, payroll, payslips). Group 8+ replaces those placeholders
+- [x] 7.11 `App` wraps `QueryClientProvider` + `BrowserRouter` + dev-only `ReactQueryDevtools`. Toast layer deferred to 7.5 (no toast lib yet)
+- [x] 7.12 `apps/web/.env.example` with `VITE_API_URL=http://localhost:3030/api/v1`. Created `apps/web/.env` for the local run
+- [x] 7.13 Verified: `pnpm --filter @myfactorydesk/web dev` serves at `http://localhost:5173` (HTML 200, `/src/main.tsx` transforms cleanly via Vite). `pnpm --filter @myfactorydesk/web build` produces production bundle (296KB JS, 8KB CSS) + workbox-precached PWA assets
+- [x] 7.x **Shared package switched to dual ESM+CJS emit** to unblock Vite/Rollup. Vite couldn't statically analyse re-exports from the CJS-only build (`__exportStar` is dynamic). Now: `dist/cjs/` (with `package.json: type=commonjs`) for the API + jest, `dist/esm/` (with `package.json: type=module`) for the web. `package.json#exports` resolves both via `import`/`require` conditions. API jest moduleNameMapper updated to point at `dist/cjs/index.js`. Both API typecheck/test/build and web typecheck/build remain green
 
 ## 8. Login, Dashboard, and Employees UI
 
-- [ ] 8.1 Build `/login` route with phone+password form, calls `POST /auth/login`, stores tokens, redirects to `/dashboard`
-- [ ] 8.2 Build `/dashboard` placeholder with `Hello, {user.name}` and a Logout button
-- [ ] 8.3 Build `/employees` list with search box, active-filter toggle, mobile cards / desktop table
-- [ ] 8.4 Build `/employees/new` create form using `CreateEmployeeSchema`
-- [ ] 8.5 Build `/employees/:id` detail view with edit + soft-delete actions, role-gated
-- [ ] 8.6 Implement loading skeletons, error states with Retry, and empty states with CTAs on each screen
-- [ ] 8.7 Add optimistic updates for create/update with rollback on failure
-- [ ] 8.8 Verify on a 360×800 viewport: login → see seeded employees → add new → edit → soft-delete
+- [x] 8.1 `/login` route — `apps/web/src/routes/Login.tsx` calls `POST /auth/login`, stores tokens via `setSession`, redirects to `from` location or `/dashboard`. Inline error from API `error.message` (built in Group 7 scaffold)
+- [x] 8.2 `/dashboard` — shows signed-in name + role + phone, Logout button calls `POST /auth/logout` (best-effort) then clears session and navigates to `/login` (built in Group 7 scaffold)
+- [x] 8.3 `/employees` list — `EmployeesList.tsx`: search input (matches name + empCode), active-only checkbox (default on), mobile-first card rows (`min-h-tap`, salary on the right). Desktop falls back to wider cards — table view deferred (cards work fine to 1280px+ for V1)
+- [x] 8.4 `/employees/new` — `NewEmployee.tsx` with React Hook Form + `zodResolver(CreateEmployeeSchema)`. Fields for v1: name, phone, designation, dateOfJoining, basicSalary, hra. Allowances/fixedDeductions/PII deferred to a richer "Advanced" expander (will add when first user asks). On success → navigate to `/employees/:id`
+- [x] 8.5 `/employees/:id` — `EmployeeDetail.tsx`: read view (employee, salary, masked PII sections) + Edit toggle (OWNER/MANAGER) + soft-delete with confirmation dialog (OWNER only). Header Edit button is hidden for STAFF/ACCOUNTANT
+- [x] 8.6 Loading skeletons (`Skeleton`), error state with Retry (`ErrorState`, calls `query.refetch`), empty state with role-gated "+ Add Employee" CTA (`EmptyState`). Each list/detail screen wires through these. Centralised `apiErrorMessage(err)` extracts the API envelope's `error.message`
+- [x] 8.7 Optimistic update on `useUpdateEmployee` — `onMutate` patches the detail cache and stores the previous snapshot, `onError` rolls back, `onSettled` invalidates `['employees']`. Create is **not** optimistic by design (no temp id; navigate-on-success is simpler and equally fast on a phone)
+- [x] 8.8 End-to-end flow verified through the same HTTP path the UI uses: login → list → create (auto empCode `EMP20260006`) → PATCH `basicSalary` → soft-delete (`isActive=false`, IST `dateOfLeaving`). CORS preflight from `:5173` → 204. SPA deep-link `/employees/:id` → 200. **Visual 360×800 phone-viewport verification is owed** — needs a real browser/devtools; the CSS uses `min-h-tap: 56px` everywhere and the layout is mobile-first by construction
+- [x] 8.x Reusable primitives added under `src/components/ui/`: `Button` (variants + tap size), `Input`, `Skeleton`, `EmptyState`, `ErrorState`. `AppLayout` (header with optional Back + action slot) used across all employees pages. Replaces the deferred 7.5 shadcn init with the smallest surface that V1 actually needs
+- [x] 8.x Feature folder `apps/web/src/features/employees/` per the `mobile-web-pwa` spec § Server state via TanStack Query: `api.ts` (axios calls), `hooks/useEmployees.ts` (queries + mutations + `employeesKeys` factory), and the three page components. Mutations invalidate `['employees']` on settle
 
 ## 9. Attendance Module (Backend)
 

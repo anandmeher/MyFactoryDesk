@@ -2,6 +2,9 @@ import { QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { queryClient } from '@/lib/queryClient'
+import { EmployeeDetail } from '@/features/employees/EmployeeDetail'
+import { EmployeesList } from '@/features/employees/EmployeesList'
+import { NewEmployee } from '@/features/employees/NewEmployee'
 import { Dashboard } from '@/routes/Dashboard'
 import { Login } from '@/routes/Login'
 import { Placeholder } from '@/routes/Placeholder'
@@ -22,10 +25,26 @@ export function App() {
             }
           />
           <Route
-            path="/employees/*"
+            path="/employees"
             element={
               <RequireAuth>
-                <Placeholder title="Employees" />
+                <EmployeesList />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/employees/new"
+            element={
+              <RequireAuth>
+                <NewEmployee />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/employees/:id"
+            element={
+              <RequireAuth>
+                <EmployeeDetail />
               </RequireAuth>
             }
           />
