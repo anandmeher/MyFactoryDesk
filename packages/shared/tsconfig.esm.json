@@ -1,12 +1,12 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "module": "commonjs",
-    "moduleResolution": "node",
+    "module": "ES2022",
+    "moduleResolution": "Bundler",
     "rootDir": "src",
-    "outDir": "dist/cjs",
-    "declaration": true,
-    "declarationMap": true,
+    "outDir": "dist/esm",
+    "declaration": false,
+    "declarationMap": false,
     "sourceMap": true
   },
   "include": ["src/**/*.ts"]
