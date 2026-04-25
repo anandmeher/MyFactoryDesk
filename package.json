@@ -8,7 +8,9 @@
     "pnpm": ">=9"
   },
   "scripts": {
-    "dev": "pnpm -r --parallel dev",
+    "dev": "bash scripts/dev.sh",
+    "dev:raw": "pnpm -r --parallel dev",
+    "dev:stop": "docker compose down",
     "build": "pnpm -r build",
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck",
