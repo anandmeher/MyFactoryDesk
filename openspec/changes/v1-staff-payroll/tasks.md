@@ -128,15 +128,15 @@
 
 ## 10. Attendance Module (Frontend)
 
-- [ ] 10.1 Build `/attendance` daily-mark screen with date picker (default today in IST) and per-employee rows
-- [ ] 10.2 Add P/HD/L/A quick-action buttons (≥56px tap target each) and visible selection state
-- [ ] 10.3 Add a "Mark all present" button at top
-- [ ] 10.4 Add per-row OT-hours input revealed via long-press or an "OT" link
-- [ ] 10.5 Add a floating Save button showing the count of marked employees; on tap, POST `/attendance/bulk`
-- [ ] 10.6 On save success, refresh and show the saved state with edit affordance
-- [ ] 10.7 Build `/attendance/calendar/:employeeId` monthly calendar view with status colours per day
-- [ ] 10.8 Build `/attendance/summary` showing per-employee monthly counts; stacked cards on mobile
-- [ ] 10.9 Verify on a 360-wide viewport: mark 30 employees, save, see saved state, view calendar and summary
+- [x] 10.1 `AttendanceDailyMark.tsx` — date picker defaults to today in IST via `formatInTimeZone(new Date(), 'Asia/Kolkata', 'yyyy-MM-dd')`. Loads active employees + existing attendance for the date and seeds local row state from both.
+- [x] 10.2 P / HD / L / A quick-action buttons in a 4-col grid using `min-h-tap` (56px floor), tone-coded (emerald / amber / sky / red). Selected state is visible (filled tone vs. slate-100) and `aria-pressed` reflects the pick. Tapping the same status again clears it.
+- [x] 10.3 Top "Mark all present" secondary button, hidden for STAFF/ACCOUNTANT (gated on OWNER/MANAGER).
+- [x] 10.4 Per-row "OT" link toggles a dedicated decimal input (`inputMode="decimal"`, regex-validated `^\d+(\.\d{1,2})?$` at save). OT auto-shows for rows that already have a non-zero OT value loaded from the server.
+- [x] 10.5 Floating bottom bar shows `{markedCount} marked` + a tap-sized Save button calling `useBulkMarkAttendance`. Layout uses `pb-24` on the list so the bar never overlaps the last row.
+- [x] 10.6 `onSuccess` invalidates the `['attendance']` query family so the list re-fetches and the row state re-seeds with `existing.overtimeHours` / `status` — that's the saved-state edit affordance.
+- [x] 10.7 `AttendanceCalendar.tsx` at `/attendance/calendar/:employeeId` — 7-col grid of all days in the picked month with status-coloured tiles, day number + 1-2 letter status code, plus a 6-status legend. Month/year selects default to today in IST.
+- [x] 10.8 `AttendanceSummary.tsx` at `/attendance/summary` — stacked employee cards on mobile with a 3-col-on-mobile / 6-col-on-sm grid of counters (P / Half / Paid L / Unpaid L / Absent / Holiday) and an inline OT total. Each card has a "Calendar →" link to the per-employee view.
+- [ ] 10.9 Visual 360-wide-viewport verification owed (same pattern as 8.8). Build + dev-server module transforms verified clean: web `tsc -b`, `vite build`, and dev fetches of `/src/main.tsx`, `App.tsx`, all three attendance components, hooks, and api.ts all return 200 with no vite warnings.
 
 ## 11. Advances (Backend + Frontend)
 
