@@ -1,0 +1,205 @@
+// Paper Plates V1 schema — see CLAUDE.md §Domain Model and openspec/changes/v1-staff-payroll/specs.
+// Source of truth for the data model. Keep in sync with @paper-plates/shared Zod schemas.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  OWNER
+  MANAGER
+  STAFF
+  ACCOUNTANT
+}
+
+enum SalaryType {
+  MONTHLY
+  DAILY
+}
+
+enum AttendanceStatus {
+  PRESENT
+  HALF_DAY
+  PAID_LEAVE
+  UNPAID_LEAVE
+  ABSENT
+  HOLIDAY
+}
+
+enum PayrollStatus {
+  DRAFT
+  FINALIZED
+  PAID
+}
+
+model User {
+  id           String  @id @default(cuid())
+  phone        String  @unique
+  passwordHash String
+  name         String
+  role         Role
+  isActive     Boolean @default(true)
+
+  employee   Employee? @relation(fields: [employeeId], references: [id])
+  employeeId String?   @unique
+
+  refreshTokens RefreshToken[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([role])
+}
+
+// Refresh tokens are tracked server-side so we can revoke on logout / rotation.
+model RefreshToken {
+  id        String    @id @default(cuid())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model Employee {
+  id               String     @id @default(cuid())
+  empCode          String     @unique
+  name             String
+  phone            String
+  designation      String
+  dateOfJoining    DateTime   @db.Date
+  dateOfLeaving    DateTime?  @db.Date
+  salaryType       SalaryType @default(MONTHLY)
+  basicSalary      Decimal    @db.Decimal(12, 2)
+  hra              Decimal    @default(0) @db.Decimal(12, 2)
+  // Allowances: Array<{ name: string, amount: string, alwaysFull: boolean }>
+  allowances       Json       @default("[]")
+  // Fixed deductions: Array<{ name: string, amount: string }>
+  fixedDeductions  Json       @default("[]")
+  // PAN/Aadhaar stored AES-256-GCM encrypted as `iv:tag:ciphertext`. Never log.
+  panEncrypted     String?
+  aadhaarEncrypted String?
+  isActive         Boolean    @default(true)
+
+  user       User?
+  attendance Attendance[]
+  advances   Advance[]
+  payslips   Payslip[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive])
+  @@index([name])
+}
+
+model Attendance {
+  id            String           @id @default(cuid())
+  employee      Employee         @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  employeeId    String
+  date          DateTime         @db.Date
+  status        AttendanceStatus
+  overtimeHours Decimal          @default(0) @db.Decimal(5, 2)
+  remarks       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([employeeId, date])
+  @@index([date])
+  @@index([employeeId])
+}
+
+model Advance {
+  id             String   @id @default(cuid())
+  employee       Employee @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  employeeId     String
+  amount         Decimal  @db.Decimal(12, 2)
+  date           DateTime @db.Date
+  deductionMonth Int
+  deductionYear  Int
+  remarks        String?
+  isDeducted     Boolean  @default(false)
+
+  payrollRun   PayrollRun? @relation(fields: [payrollRunId], references: [id], onDelete: SetNull)
+  payrollRunId String?
+
+  // When an advance is partially applied and the remainder is rescheduled,
+  // the new "carry-forward" Advance row points back via replacesAdvanceId.
+  replacesAdvance   Advance?  @relation("AdvanceCarryForward", fields: [replacesAdvanceId], references: [id], onDelete: SetNull)
+  replacesAdvanceId String?
+  carriedForwardTo  Advance[] @relation("AdvanceCarryForward")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([employeeId])
+  @@index([deductionYear, deductionMonth])
+  @@index([isDeducted])
+  @@index([payrollRunId])
+  @@index([replacesAdvanceId])
+}
+
+model PayrollRun {
+  id          String        @id @default(cuid())
+  month       Int
+  year        Int
+  status      PayrollStatus @default(DRAFT)
+  finalizedAt DateTime?
+  paidAt      DateTime?
+
+  payslips Payslip[]
+  advances Advance[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([year, month])
+  @@index([status])
+}
+
+model Payslip {
+  id           String     @id @default(cuid())
+  payrollRun   PayrollRun @relation(fields: [payrollRunId], references: [id], onDelete: Cascade)
+  payrollRunId String
+  employee     Employee   @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  employeeId   String
+
+  // Frozen on finalize — never recalculated retroactively.
+  daysPayable              Int
+  daysWorked               Decimal @db.Decimal(5, 2)
+  basicEarned              Decimal @db.Decimal(12, 2)
+  hraEarned                Decimal @db.Decimal(12, 2)
+  // [{ name, amount }]
+  allowancesBreakdown      Json    @default("[]")
+  allowancesTotal          Decimal @db.Decimal(12, 2)
+  otAmount                 Decimal @db.Decimal(12, 2)
+  grossEarnings            Decimal @db.Decimal(12, 2)
+  // [{ name, amount }]
+  fixedDeductionsBreakdown Json    @default("[]")
+  fixedDeductionsTotal     Decimal @db.Decimal(12, 2)
+  // [{ advanceId, amountApplied, remaining }]
+  advancesApplied          Json    @default("[]")
+  advanceDeducted          Decimal @db.Decimal(12, 2)
+  totalDeductions          Decimal @db.Decimal(12, 2)
+  netPay                   Decimal @db.Decimal(12, 2)
+  // [{ advanceId, remaining }]
+  carriedForward           Json    @default("[]")
+
+  // Audit trail per CLAUDE.md §Payroll
+  calculatorVersion String
+  inputsJson        Json
+  calculatedAt      DateTime @default(now())
+
+  @@unique([payrollRunId, employeeId])
+  @@index([employeeId])
+}
