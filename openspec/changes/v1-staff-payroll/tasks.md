@@ -117,14 +117,14 @@
 
 ## 9. Attendance Module (Backend)
 
-- [ ] 9.1 Create `AttendanceModule` in `apps/api/src/attendance/`
-- [ ] 9.2 Implement `POST /attendance/bulk` wrapped in `prisma.$transaction` with upsert on `(employeeId, date)`; role gate OWNER/MANAGER
-- [ ] 9.3 Implement `GET /attendance?from=&to=&employeeId=` (any auth role) with date-range validation
-- [ ] 9.4 Implement `GET /attendance/summary?month=&year=` returning per-active-employee aggregated counts; ensure all active employees appear even with zero rows; sum `overtimeHours` as Decimal
-- [ ] 9.5 Use `date-fns-tz` with `Asia/Kolkata` for all month-boundary math; never call `new Date()` for business dates
-- [ ] 9.6 Add unit tests for the summary aggregation logic
-- [ ] 9.7 Add e2e tests for bulk marking with mixed statuses and a `TZ=UTC`-running test that verifies April-25 belongs to April
-- [ ] 9.8 Verify: bulk mark 5 employees, fetch range and summary; both shapes match the Zod schemas
+- [x] 9.1 `AttendanceModule` at `apps/api/src/attendance/` (controller + service + pure aggregator); wired into `AppModule`
+- [x] 9.2 `POST /attendance/bulk` — pre-validates referenced employees + duplicate-id guard, then transactional upsert on `(employeeId, date)`; role gate OWNER/MANAGER (verified 403 for STAFF)
+- [x] 9.3 `GET /attendance?from=&to=&employeeId=` — `from <= to` enforced by Zod refine (verified 400 on inverted range); ordered `(date ASC, employeeId ASC)`
+- [x] 9.4 `GET /attendance/summary?month=&year=` — pure `aggregateMonthlySummary()` (in `aggregate.ts`) joins active employees with the month's rows; zero rows for employees with no attendance; `overtimeHours` summed as `Prisma.Decimal` and serialised via `toFixed(2)`
+- [x] 9.5 Month boundaries via `monthRangeUtc(year, month)` (UTC arithmetic only, leap-year aware via `Date.UTC(year, month, 0).getUTCDate()`). `@db.Date` rows are anchored at UTC midnight of the calendar day (mirrors `EmployeesService.toDate`), so the same range works regardless of the server's TZ. `new Date()` is not used for any business-date math
+- [x] 9.6 `aggregate.spec.ts` — 9 unit tests covering: zero-row employees, status counters, Decimal overtime sum, ghost employeeId drop, ordering, plus 4 `monthRangeUtc` cases (April, leap-Feb, non-leap-Feb, December rollover). All 21 API unit tests pass under `TZ=UTC`
+- [ ] 9.7 e2e tests — **deferred** (same justification as 5.13 / 6.8: supertest config not yet wired). Manual smoke + the TZ=UTC unit run replace it for now
+- [x] 9.8 Smoke matrix verified end-to-end (15 curl probes via `/api/v1`): OWNER login → list employees → bulk mark 3 (count=3) → upsert overwrite (count=1) → second-day bulk (count=3) → range query returns 6 rows ordered by `(date,employeeId)` → summary aggregates correctly per employee → STAFF POST 403 FORBIDDEN → STAFF GET 200 → `from > to` 400 VALIDATION_ERROR → unknown enum 400 → unknown employeeId 400 (with `details.missing`) → duplicate-id-in-marks 400 → 2026-04-30 included in April summary → 2026-05-01 excluded from April
 
 ## 10. Attendance Module (Frontend)
 
