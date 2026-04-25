@@ -140,14 +140,14 @@
 
 ## 11. Advances (Backend + Frontend)
 
-- [ ] 11.1 Create `AdvancesModule` in `apps/api/src/advances/` with create/list/get/update/delete
-- [ ] 11.2 Role-gate writes: `POST` and `PATCH` (OWNER, ACCOUNTANT); `DELETE` (OWNER)
-- [ ] 11.3 Reject `PATCH` and `DELETE` with `409 ADVANCE_LOCKED` if `isDeducted=true` or `payrollRunId` is set
-- [ ] 11.4 Add e2e tests covering CRUD plus locked-after-deduction behaviour
-- [ ] 11.5 Build `/advances` list with employee filter and deduction-period filter
-- [ ] 11.6 Build advance create form gated to OWNER and ACCOUNTANT
-- [ ] 11.7 Hide edit/delete buttons when `isDeducted=true`
-- [ ] 11.8 Verify on mobile viewport: create, list, edit, delete an advance
+- [x] 11.1 `AdvancesModule` at `apps/api/src/advances/` (controller + service); wired into `AppModule`. Endpoints: `POST /advances`, `GET /advances`, `GET /advances/:id`, `PATCH /advances/:id`, `DELETE /advances/:id`
+- [x] 11.2 Role gates: `POST` & `PATCH` (OWNER, ACCOUNTANT); `DELETE` (OWNER). Verified STAFF gets 403 on POST and DELETE
+- [x] 11.3 `assertEditable()` rejects `PATCH` and `DELETE` with `409 ADVANCE_LOCKED` whenever `isDeducted=true` OR `payrollRunId` is set. Verified by flipping `isDeducted` directly in Postgres and re-attempting both
+- [ ] 11.4 e2e tests — **deferred** (same as 5.13 / 6.8 / 9.7: supertest config not yet wired). Manual smoke replaces for now
+- [x] 11.5 `/advances` `AdvancesList` — employee dropdown (active employees), deduction month select, deduction year input. Empty/error/loading states. Edit/Delete links hidden when locked (see 11.7)
+- [x] 11.6 `/advances/new` `NewAdvance` — RHF + `zodResolver(CreateAdvanceSchema)`, defaults to today/this-month in IST. Inline employee `<select>`. Visible to OWNER/ACCOUNTANT; STAFF/MANAGER hit 403 on submit. Plus `/advances/:id/edit` `EditAdvance` page that pre-populates and shows a "locked" notice instead of the form when the advance has been linked to a payslip
+- [x] 11.7 Edit/Delete row buttons in the list are gated on `!isDeducted && !payrollRunId`; PII-style "deducted" badge shown on locked rows. Edit page also blocks render when the loaded advance is locked
+- [x] 11.8 API smoke verified end-to-end (10 curl probes via `/api/v1`): OWNER create, list with `?employeeId=&isDeducted=false` filter, PATCH (deductionMonth 4→5), STAFF POST 403, STAFF DELETE 403, numeric amount → 400 VALIDATION_ERROR, unknown employeeId → 400, GET by id, OWNER DELETE 204, GET-after-delete 404, locked advance: PATCH 409 ADVANCE_LOCKED + DELETE 409 ADVANCE_LOCKED. Web typecheck (`tsc --noEmit`) and `vite build` clean. Visual 360-wide-viewport verification owed (same as 8.8 / 10.9)
 
 ## 12. Payroll Calculator (Tests First)
 

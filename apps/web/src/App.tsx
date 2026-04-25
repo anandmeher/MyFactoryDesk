@@ -2,6 +2,9 @@ import { QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { queryClient } from '@/lib/queryClient'
+import { AdvancesList } from '@/features/advances/AdvancesList'
+import { EditAdvance } from '@/features/advances/EditAdvance'
+import { NewAdvance } from '@/features/advances/NewAdvance'
 import { AttendanceCalendar } from '@/features/attendance/AttendanceCalendar'
 import { AttendanceDailyMark } from '@/features/attendance/AttendanceDailyMark'
 import { AttendanceSummary } from '@/features/attendance/AttendanceSummary'
@@ -78,10 +81,26 @@ export function App() {
             }
           />
           <Route
-            path="/advances/*"
+            path="/advances"
             element={
               <RequireAuth>
-                <Placeholder title="Advances" />
+                <AdvancesList />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/advances/new"
+            element={
+              <RequireAuth>
+                <NewAdvance />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/advances/:id/edit"
+            element={
+              <RequireAuth>
+                <EditAdvance />
               </RequireAuth>
             }
           />
