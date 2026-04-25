@@ -74,8 +74,10 @@ ok "migrations up to date"
 
 # --- 5. Start workspaces in watch mode ------------------------------------
 log "starting workspaces in parallel (Ctrl+C to stop)..."
-printf '%s     api      %s%s http://localhost:3000/api/v1   docs: /api/docs%s\n' \
-  "$C_BOLD" "$C_RESET" "$C_DIM" "$C_RESET"
+API_PORT=$(grep -E '^PORT=' "$API_ENV" | head -1 | cut -d= -f2)
+API_PORT=${API_PORT:-3030}
+printf '%s     api      %s%s http://localhost:%s/api/v1   docs: /api/docs%s\n' \
+  "$C_BOLD" "$C_RESET" "$C_DIM" "$API_PORT" "$C_RESET"
 printf '%s     web      %s%s http://localhost:5173 (when scaffolded)%s\n' \
   "$C_BOLD" "$C_RESET" "$C_DIM" "$C_RESET"
 echo
