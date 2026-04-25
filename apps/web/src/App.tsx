@@ -8,6 +8,8 @@ import { NewEmployee } from '@/features/employees/NewEmployee'
 import { Dashboard } from '@/routes/Dashboard'
 import { Login } from '@/routes/Login'
 import { Placeholder } from '@/routes/Placeholder'
+import { PreviewShell } from '@/routes/preview/PreviewShell'
+import { PreviewShellWithList } from '@/routes/preview/PreviewShellWithList'
 import { RequireAuth } from '@/routes/RequireAuth'
 
 export function App() {
@@ -77,6 +79,22 @@ export function App() {
             element={
               <RequireAuth>
                 <Placeholder title="Payslip" />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/preview/shell"
+            element={
+              <RequireAuth>
+                <PreviewShell />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/preview/shell-with-list"
+            element={
+              <RequireAuth>
+                <PreviewShellWithList />
               </RequireAuth>
             }
           />
