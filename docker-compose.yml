@@ -1,0 +1,38 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: paperplates-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: paperplates
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+    ports:
+      # Host port 5433 -> container 5432 (5432 is taken on this machine)
+      - '5433:5432'
+    volumes:
+      - paperplates_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U app -d paperplates']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: paperplates-redis
+    restart: unless-stopped
+    ports:
+      # Host port 6380 -> container 6379 (6379 is taken on this machine)
+      - '6380:6379'
+    volumes:
+      - paperplates_redis:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  paperplates_postgres:
+  paperplates_redis:
