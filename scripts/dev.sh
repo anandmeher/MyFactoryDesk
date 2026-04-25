@@ -33,7 +33,7 @@ ok "compose stack up"
 # --- 2. Wait for Postgres --------------------------------------------------
 log "waiting for postgres to accept connections..."
 attempts=0
-until docker exec paperplates-postgres pg_isready -U app -d paperplates >/dev/null 2>&1; do
+until docker exec myfactorydesk-postgres pg_isready -U app -d myfactorydesk >/dev/null 2>&1; do
   attempts=$((attempts + 1))
   if [[ $attempts -gt 30 ]]; then
     die "postgres did not become ready within 30 seconds"
@@ -67,12 +67,17 @@ else
     "$C_CYAN" "$C_RESET" "$C_DIM" "$C_RESET"
 fi
 
-# --- 4. Apply pending Prisma migrations -----------------------------------
+# --- 4. Build the shared package (apps depend on its compiled output) ----
+log "building @myfactorydesk/shared..."
+pnpm --filter @myfactorydesk/shared run build >/dev/null
+ok "shared built"
+
+# --- 5. Apply pending Prisma migrations ----------------------------------
 log "applying any pending Prisma migrations..."
-pnpm --filter @paper-plates/api exec prisma migrate deploy >/dev/null
+pnpm --filter @myfactorydesk/api exec prisma migrate deploy >/dev/null
 ok "migrations up to date"
 
-# --- 5. Start workspaces in watch mode ------------------------------------
+# --- 6. Start workspaces in watch mode ------------------------------------
 log "starting workspaces in parallel (Ctrl+C to stop)..."
 API_PORT=$(grep -E '^PORT=' "$API_ENV" | head -1 | cut -d= -f2)
 API_PORT=${API_PORT:-3030}

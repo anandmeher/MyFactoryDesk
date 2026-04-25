@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Installable PWA shell
-`apps/web` SHALL be a Vite + React + TypeScript application configured as a PWA via `vite-plugin-pwa`. The manifest SHALL declare `name: "Paper Plates"`, `short_name: "PaperPlates"`, `theme_color: "#1f2937"`, `background_color: "#ffffff"`, `display: "standalone"`, and a placeholder icon set. A service worker SHALL be registered to enable installability and shell caching.
+`apps/web` SHALL be a Vite + React + TypeScript application configured as a PWA via `vite-plugin-pwa`. The manifest SHALL declare `name: "MyFactoryDesk"`, `short_name: "MyFactoryDesk"`, `theme_color: "#1f2937"`, `background_color: "#ffffff"`, `display: "standalone"`, and a placeholder icon set. A service worker SHALL be registered to enable installability and shell caching.
 
 #### Scenario: Lighthouse PWA criteria pass
 - **WHEN** Lighthouse audits the deployed staging URL
@@ -44,7 +44,7 @@ A route guard component SHALL redirect any unauthenticated visitor of `/dashboar
 ### Requirement: Employees screens
 The web SHALL provide:
 - `/employees` — list with search box and active filter; cards on mobile, table on desktop.
-- `/employees/new` — create form using `CreateEmployeeSchema` from `@paper-plates/shared`.
+- `/employees/new` — create form using `CreateEmployeeSchema` from `@myfactorydesk/shared`.
 - `/employees/:id` — detail view with edit and soft-delete actions, role-gated to OWNER/MANAGER (delete: OWNER only).
 
 All forms SHALL use React Hook Form with Zod resolver. Money inputs SHALL accept decimal strings and display via `Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' })`.

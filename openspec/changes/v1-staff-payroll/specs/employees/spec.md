@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Create employee
-The API SHALL accept `POST /api/v1/employees` from `OWNER` or `MANAGER` users. Body fields are validated by `CreateEmployeeSchema` from `@paper-plates/shared`. If `empCode` is omitted, the API SHALL auto-generate one of the form `EMP{YYYY}{4-digit-sequence}` based on the current IST year (e.g., `EMP20260001`). The response is `201` with `{ data: <Employee> }`.
+The API SHALL accept `POST /api/v1/employees` from `OWNER` or `MANAGER` users. Body fields are validated by `CreateEmployeeSchema` from `@myfactorydesk/shared`. If `empCode` is omitted, the API SHALL auto-generate one of the form `EMP{YYYY}{4-digit-sequence}` based on the current IST year (e.g., `EMP20260001`). The response is `201` with `{ data: <Employee> }`.
 
 #### Scenario: Successful create with omitted empCode
 - **WHEN** an `OWNER` posts a new employee with no `empCode`

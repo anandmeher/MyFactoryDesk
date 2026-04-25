@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { DateOnlyString, MoneyString, PhoneString, SalaryType } from './common.js'
+import { DateOnlyString, MoneyString, PhoneString, SalaryType } from './common'
 
 export const AllowanceSchema = z.object({
   name: z.string().min(1).max(60),

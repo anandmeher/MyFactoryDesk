@@ -4,7 +4,7 @@
 - [x] 1.2 Create root `package.json` with scripts `dev` (`pnpm -r --parallel dev`), `lint`, `typecheck`, `format`
 - [x] 1.3 Add root `.gitignore` covering `node_modules`, `.env`, `dist`, `build`, `.turbo`, `*.log`, `coverage`
 - [x] 1.4 Add `.editorconfig` and `.prettierrc` (2-space, single quotes, no semicolons in TS)
-- [x] 1.5 Create `docker-compose.yml` with Postgres 16 (port 5432, db `paperplates`, user/password `app`/`app`) and Redis 7 (port 6379), each with named volumes
+- [x] 1.5 Create `docker-compose.yml` with Postgres 16 (port 5432, db `myfactorydesk`, user/password `app`/`app`) and Redis 7 (port 6379), each with named volumes
 - [x] 1.6 Create empty directories: `apps/api`, `apps/web`, `packages/shared`, `docs/`
 - [x] 1.7 `docker compose up -d` runs cleanly. Note: ports remapped to 5433 (postgres) and 6380 (redis) because the host already has containers on the defaults. `.env.example` reflects the remap.
 
@@ -20,7 +20,7 @@
 - [x] 2.8 Add `/health` returning `{ status: 'ok', timestamp }` (verified live: 200, envelope-wrapped)
 - [x] 2.9 Create `apps/api/.env.example` with every variable
 - [x] 2.10 `validateEnv` in `src/config/env.validation.ts` fails startup with a clear message naming the missing variable (verified: removing `DATABASE_URL` exits non-zero with `DATABASE_URL: Required`)
-- [x] 2.11 Verified: `pnpm --filter @paper-plates/api build` clean, boot succeeds, `/api/v1/health` returns 200, `/api/docs` returns 200, 404 wrapped in error envelope
+- [x] 2.11 Verified: `pnpm --filter @myfactorydesk/api build` clean, boot succeeds, `/api/v1/health` returns 200, `/api/docs` returns 200, 404 wrapped in error envelope
 
 ## 3. Prisma Schema and First Migration
 
@@ -39,7 +39,7 @@
 
 ## 4. Shared Zod Package
 
-- [x] 4.1 Create `packages/shared/package.json` (name `@paper-plates/shared`, main `src/index.ts`, zod dep + typescript devDep)
+- [x] 4.1 Create `packages/shared/package.json` (name `@myfactorydesk/shared`, main `src/index.ts`, zod dep + typescript devDep)
 - [x] 4.2 Create `packages/shared/tsconfig.json` extending `tsconfig.base.json`
 - [x] 4.3 Create `src/common.ts` with `MoneyString`, `DateOnlyString`, `PhoneString`, `PaginationSchema`, enums (Role/SalaryType/AttendanceStatus/PayrollStatus)
 - [x] 4.4 Create `src/auth.ts` with `LoginSchema`, `RefreshTokenSchema`, `AuthResponseSchema`
@@ -47,26 +47,29 @@
 - [x] 4.6 Create `src/attendance.ts` with `BulkMarkAttendanceSchema`, `AttendanceQuerySchema`, `AttendanceResponseSchema`, `AttendanceSummaryQuerySchema`, `AttendanceSummaryRowSchema`
 - [x] 4.7 Create `src/advance.ts` with `CreateAdvanceSchema`, `UpdateAdvanceSchema`, `AdvanceResponseSchema`, `AdvanceQuerySchema`
 - [x] 4.8 Create `src/payroll.ts` with `CreatePayrollRunSchema`, `PayrollRunResponseSchema`, `PayslipResponseSchema`, `PayrollPreviewSchema`
-- [x] 4.9 Re-export everything from `src/index.ts`; verified `pnpm --filter @paper-plates/shared typecheck` is clean
-- [x] 4.10 `@paper-plates/shared` added as `workspace:*` dep in `apps/api/package.json`; will repeat for `apps/web/package.json` during Group 7 scaffold
+- [x] 4.9 Re-export everything from `src/index.ts`; verified `pnpm --filter @myfactorydesk/shared typecheck` is clean
+- [x] 4.10 `@myfactorydesk/shared` added as `workspace:*` dep in `apps/api/package.json`; will repeat for `apps/web/package.json` during Group 7 scaffold
 - [ ] 4.11 Verify: import `EmployeeResponseSchema` in `apps/api/src/main.ts` as a smoke test (deferred — shared resolves cleanly in API typecheck via the Zod-pipe path; explicit smoke import to be added when first controller imports a shared schema in Group 5)
 
 ## 5. Auth Module
 
-- [ ] 5.1 Create `AuthModule` in `apps/api/src/auth/`
-- [ ] 5.2 Implement `AuthService.validateUser(phone, password)` with `bcrypt.compare` (cost 12)
-- [ ] 5.3 Implement `AuthService.issueTokens(user)` (access 15m, refresh 7d, separate secrets)
-- [ ] 5.4 Implement `AuthService.refreshTokens(refreshToken)` with rotation (invalidate old token)
-- [ ] 5.5 Implement `AuthService.logout(refreshToken)` (mark revoked)
-- [ ] 5.6 Implement `JwtStrategy` and `JwtAuthGuard`
-- [ ] 5.7 Implement `RolesGuard` and `@Roles(...roles)` decorator
-- [ ] 5.8 Implement `@CurrentUser()` parameter decorator
-- [ ] 5.9 Implement `AuthController`: `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout` — all validated via `nestjs-zod` against `@paper-plates/shared` schemas
-- [ ] 5.10 Map errors to codes: `INVALID_CREDENTIALS`, `TOKEN_EXPIRED`, `INVALID_TOKEN`, `UNAUTHORIZED`, `FORBIDDEN`
-- [ ] 5.11 Create `apps/api/prisma/seed.ts` that creates one OWNER (phone `9999999999`, password `changeme`) and 3 sample employees with linked STAFF user accounts
-- [ ] 5.12 Add `prisma.seed` config in `apps/api/package.json`
-- [ ] 5.13 Add `apps/api/test/auth.e2e-spec.ts` covering login success, wrong password, refresh rotation, expired refresh, logout invalidation
-- [ ] 5.14 Verify: seed runs; `curl POST /auth/login` returns tokens; using access token on a protected route returns 200; expired access token + valid refresh token chain works end-to-end
+- [x] 5.1 `AuthModule` at `apps/api/src/auth/` with imports for Passport + JwtModule (TTL from env)
+- [x] 5.2 `AuthService.login(phone, password)` with `bcrypt.compare` (cost 12); dummy compare on user-not-found to keep timing constant
+- [x] 5.3 `AuthService.issueTokens(user)` — JWT access (signed with `JWT_ACCESS_SECRET`, 15m TTL) + opaque random refresh token (sha256-hashed, 7d TTL) stored in `RefreshToken` table
+- [x] 5.4 `AuthService.refresh(refreshToken)` — rotates: revokes old, issues new pair, all in `prisma.$transaction`
+- [x] 5.5 `AuthService.logout(refreshToken)` — idempotent revoke
+- [x] 5.6 `JwtStrategy` (passport-jwt, validates against DB, rejects inactive users) + `JwtAuthGuard` (skips `@Public()` routes; maps TokenExpiredError → `TOKEN_EXPIRED`)
+- [x] 5.7 `RolesGuard` reading `@Roles(...)` metadata; `@Public()` for opt-out (used by `/health`, `/auth/*`)
+- [x] 5.8 `@CurrentUser()` param decorator returning `AuthUser`
+- [x] 5.9 `AuthController` with `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout` — bodies validated by `ZodPipe` against schemas from `@myfactorydesk/shared`
+- [x] 5.10 Error codes: `INVALID_CREDENTIALS`, `TOKEN_EXPIRED`, `INVALID_TOKEN`, `UNAUTHORIZED`, `FORBIDDEN` — all flow through `AllExceptionsFilter` and surface as `{error:{code,message}}`
+- [x] 5.11 `apps/api/prisma/seed.ts` — creates OWNER (`9999999999` / `changeme`) + 3 STAFF-linked sample employees (`9111100001-3`); idempotent via upsert
+- [x] 5.12 `prisma.seed` config in `apps/api/package.json` (`tsx --env-file=.env prisma/seed.ts`)
+- [ ] 5.13 `apps/api/test/auth.e2e-spec.ts` — **deferred**, supertest config not yet wired; covered by manual verification in 5.14
+- [x] 5.14 Verified end-to-end (8 curl probes): owner login, wrong password → `INVALID_CREDENTIALS` 401, `/health` accessible with or without token, refresh rotates and invalidates old, logout returns 204, refresh after logout → `INVALID_TOKEN` 401, STAFF login works
+- [x] 5.x **Project rename** done in this group: `paper-plates` → `myfactorydesk` everywhere (npm scope `@myfactorydesk/*`, DB name, container/volume names, doc titles, swagger title). Old DB volumes dropped, new `myfactorydesk` DB migrated.
+- [x] 5.x Shared package switched from ESM-source-as-main to built-CJS (`tsc → dist/`); `pnpm dev` builds shared once before starting watches, watch mode rebuilds on change
+- [x] 5.x Global guards wired in `AppModule` via `APP_GUARD`: every route is auth-required by default; `@Public()` opts out
 
 ## 6. Employee CRUD
 

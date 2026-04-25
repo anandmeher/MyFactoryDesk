@@ -1,4 +1,4 @@
-# Paper Plates Manufacturing & Sales App
+# MyFactoryDesk Manufacturing & Sales App
 
 > This file is read automatically by Claude Code at the start of every session. Keep it updated as the project evolves.
 
@@ -68,7 +68,7 @@ V1 ships when these work end-to-end on mobile:
 ## Repository Layout (Monorepo)
 
 ```
-paper-plates/
+myfactorydesk/
 ├── apps/
 │   ├── api/              # NestJS backend
 │   └── web/              # Vite + React PWA
@@ -230,7 +230,7 @@ Create `.env.example` with all keys documented. Real `.env` is git-ignored.
 
 ```
 # Backend (apps/api/.env)
-DATABASE_URL=postgresql://app:app@localhost:5432/paperplates
+DATABASE_URL=postgresql://app:app@localhost:5432/myfactorydesk
 REDIS_URL=redis://localhost:6379
 JWT_ACCESS_SECRET=<random 32-byte hex>
 JWT_REFRESH_SECRET=<random 32-byte hex>

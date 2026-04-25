@@ -1,5 +1,5 @@
-// Paper Plates V1 schema — see CLAUDE.md §Domain Model and openspec/changes/v1-staff-payroll/specs.
-// Source of truth for the data model. Keep in sync with @paper-plates/shared Zod schemas.
+// MyFactoryDesk V1 schema — see CLAUDE.md §Domain Model and openspec/changes/v1-staff-payroll/specs.
+// Source of truth for the data model. Keep in sync with @myfactorydesk/shared Zod schemas.
 
 generator client {
   provider = "prisma-client-js"

@@ -9,7 +9,7 @@ This change covers the full V1 scope locked down in `CLAUDE.md` (the 12 sequenti
 - Stand up a pnpm monorepo with `apps/api` (NestJS), `apps/web` (Vite + React PWA), and `packages/shared` (Zod schemas/types).
 - Provision local dev infra via `docker-compose.yml` (Postgres 16 + Redis 7) and document env vars in `.env.example` files.
 - Define the V1 Prisma schema (User, Employee, Attendance, Advance, PayrollRun, Payslip) with first migration.
-- Ship `@paper-plates/shared` Zod schemas as the single source of truth for request/response shapes (consumed by both API and web).
+- Ship `@myfactorydesk/shared` Zod schemas as the single source of truth for request/response shapes (consumed by both API and web).
 - Build phone+password JWT auth (15m access / 7d refresh) with role-based guards (`OWNER`, `MANAGER`, `STAFF`, `ACCOUNTANT`).
 - Build Employee CRUD with auto-generated `empCode`, AES-GCM encryption for PAN/Aadhaar, and soft-delete (never hard-delete records with payroll history).
 - Build Attendance: bulk daily marking in a single transaction, range query, monthly summary aggregation — all IST-aware.
@@ -25,7 +25,7 @@ This change covers the full V1 scope locked down in `CLAUDE.md` (the 12 sequenti
 
 ### New Capabilities
 
-- `platform-foundation`: pnpm workspace layout, Docker Compose for Postgres+Redis, Prisma schema for V1 entities, `@paper-plates/shared` Zod package, `.env.example` contracts, NestJS bootstrap (global prefix `/api/v1`, ValidationPipe, exception filter, Swagger).
+- `platform-foundation`: pnpm workspace layout, Docker Compose for Postgres+Redis, Prisma schema for V1 entities, `@myfactorydesk/shared` Zod package, `.env.example` contracts, NestJS bootstrap (global prefix `/api/v1`, ValidationPipe, exception filter, Swagger).
 - `auth`: phone+password login with bcrypt(12), JWT access (15m) + refresh (7d) issuance/rotation/logout, JWT strategy + auth guard, `@Roles()` + roles guard, `@CurrentUser()` decorator, standard error codes (`INVALID_CREDENTIALS`, `TOKEN_EXPIRED`, `INVALID_TOKEN`).
 - `employees`: Employee master CRUD with auto `empCode` (`EMP{YYYY}{0001}`), encrypted PAN/Aadhaar (AES-GCM, key from env), soft-delete (`isActive=false`, `dateOfLeaving=today`), pagination + search + active-filter, role-scoped writes (OWNER/MANAGER), OWNER-only delete, OWNER-only PII decryption.
 - `attendance`: `POST /attendance/bulk` upserts many `(employeeId, date)` rows in one transaction; range `GET` and monthly summary `GET`; IST-anchored "which month does this belong to" logic; manual overtime hours per row.
