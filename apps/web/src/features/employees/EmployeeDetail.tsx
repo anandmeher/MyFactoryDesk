@@ -1,9 +1,9 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useForm } from 'react-hook-form'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { UpdateEmployeeSchema, type UpdateEmployeeInput } from '@myfactorydesk/shared'
-import { AppLayout } from '@/components/AppLayout'
+import { AppShell } from '@/components/shell'
 import { Button } from '@/components/ui/Button'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { Input } from '@/components/ui/Input'
@@ -32,39 +32,35 @@ export function EmployeeDetail() {
 
   if (query.isLoading) {
     return (
-      <AppLayout title="Employee" back="/employees">
+      <DetailFrame name="Employee">
         <Skeleton className="h-32 w-full" />
         <Skeleton className="h-32 w-full" />
-      </AppLayout>
+      </DetailFrame>
     )
   }
 
   if (query.isError || !query.data) {
     return (
-      <AppLayout title="Employee" back="/employees">
+      <DetailFrame name="Employee">
         <ErrorState
           message={apiErrorMessage(query.error, 'Could not load employee')}
           onRetry={() => void query.refetch()}
         />
-      </AppLayout>
+      </DetailFrame>
     )
   }
 
   const emp = query.data
 
   return (
-    <AppLayout
-      title={emp.name}
-      back="/employees"
+    <DetailFrame
+      name={emp.name}
       action={
-        canEdit && !editing && (
-          <button
-            className="rounded bg-white/10 px-3 py-1 text-sm hover:bg-white/20"
-            onClick={() => setEditing(true)}
-          >
+        canEdit && !editing ? (
+          <Button variant="secondary" size="sm" onClick={() => setEditing(true)}>
             Edit
-          </button>
-        )
+          </Button>
+        ) : null
       }
     >
       {!editing ? (
@@ -81,7 +77,35 @@ export function EmployeeDetail() {
           onSaved={() => setEditing(false)}
         />
       )}
-    </AppLayout>
+    </DetailFrame>
+  )
+}
+
+function DetailFrame({
+  name,
+  action,
+  children,
+}: {
+  name: string
+  action?: ReactNode
+  children: ReactNode
+}) {
+  return (
+    <AppShell pageTitle={name}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <Link
+            to="/employees"
+            className="inline-flex items-center gap-1 text-sm text-slate-600 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 rounded"
+          >
+            ← Employees
+          </Link>
+          <h1 className="mt-1 text-xl font-semibold text-slate-900 truncate">{name}</h1>
+        </div>
+        {action}
+      </div>
+      {children}
+    </AppShell>
   )
 }
 
@@ -110,7 +134,7 @@ function ReadView({
 
   return (
     <>
-      <div className="rounded bg-white p-4 shadow-sm space-y-2">
+      <div className="rounded-lg bg-white p-4 shadow-sm ring-1 ring-slate-200/60 space-y-2">
         <Row label="empCode" value={employee.empCode} />
         <Row label="Phone" value={employee.phone} />
         <Row label="Designation" value={employee.designation} />
@@ -118,13 +142,13 @@ function ReadView({
         <Row label="Status" value={employee.isActive ? 'Active' : 'Inactive'} />
       </div>
 
-      <div className="rounded bg-white p-4 shadow-sm space-y-2">
+      <div className="rounded-lg bg-white p-4 shadow-sm ring-1 ring-slate-200/60 space-y-2">
         <Row label="Basic salary" value={formatINR(employee.basicSalary)} />
         <Row label="HRA" value={formatINR(employee.hra)} />
       </div>
 
       {(employee.pan || employee.aadhaar) && (
-        <div className="rounded bg-white p-4 shadow-sm space-y-2">
+        <div className="rounded-lg bg-white p-4 shadow-sm ring-1 ring-slate-200/60 space-y-2">
           {employee.pan && <Row label="PAN" value={employee.pan} />}
           {employee.aadhaar && <Row label="Aadhaar" value={employee.aadhaar} />}
           <p className="text-xs text-slate-400">
@@ -145,7 +169,7 @@ function ReadView({
               Soft-delete employee
             </Button>
           ) : (
-            <div className="rounded bg-white p-4 shadow-sm space-y-3">
+            <div className="rounded-lg bg-white p-4 shadow-sm ring-1 ring-slate-200/60 space-y-3">
               <p className="text-sm">
                 Sets the employee inactive and stamps today as their date of leaving.
                 Existing payslips remain intact.
@@ -224,7 +248,7 @@ function EditForm({
   return (
     <form
       onSubmit={form.handleSubmit(onSubmit)}
-      className="space-y-4 rounded bg-white p-4 shadow-sm"
+      className="space-y-4 rounded-lg bg-white p-4 shadow-sm ring-1 ring-slate-200/60"
       noValidate
     >
       <Field label="Name" error={errors.name?.message}>

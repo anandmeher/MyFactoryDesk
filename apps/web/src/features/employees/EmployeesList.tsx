@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { AppShell } from '@/components/shell'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { Input } from '@/components/ui/Input'
 import { Skeleton } from '@/components/ui/Skeleton'
-import { AppLayout } from '@/components/AppLayout'
 import { getCurrentUser } from '@/lib/auth'
 import { apiErrorMessage } from '@/lib/error'
 import { formatINR } from '@/lib/format'
@@ -25,21 +25,20 @@ export function EmployeesList() {
   })
 
   return (
-    <AppLayout
-      title="Employees"
-      back="/dashboard"
-      action={
-        canWrite && (
+    <AppShell pageTitle="Employees">
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-semibold text-slate-900">Employees</h1>
+        {canWrite && (
           <Link
             to="/employees/new"
-            className="rounded bg-white/10 px-3 py-1 text-sm hover:bg-white/20"
+            className="inline-flex min-h-[40px] items-center rounded bg-brand px-3 text-sm font-medium text-white hover:bg-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
           >
             + Add
           </Link>
-        )
-      }
-    >
-      <div className="space-y-2 rounded bg-white p-3 shadow-sm">
+        )}
+      </div>
+
+      <div className="space-y-2 rounded-lg bg-white p-3 shadow-sm ring-1 ring-slate-200/60">
         <Input
           placeholder="Search by name or empCode"
           value={search}
@@ -89,7 +88,7 @@ export function EmployeesList() {
             <li key={emp.id}>
               <Link
                 to={`/employees/${emp.id}`}
-                className="flex min-h-tap items-center justify-between gap-3 rounded bg-white p-4 shadow-sm hover:bg-slate-50"
+                className="flex min-h-tap items-center justify-between gap-3 rounded-lg bg-white p-4 shadow-sm ring-1 ring-slate-200/60 transition hover:ring-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
               >
                 <div className="min-w-0">
                   <p className="font-medium truncate">{emp.name}</p>
@@ -108,6 +107,6 @@ export function EmployeesList() {
           ))}
         </ul>
       )}
-    </AppLayout>
+    </AppShell>
   )
 }

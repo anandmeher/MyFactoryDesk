@@ -1,56 +1,86 @@
-import { useNavigate } from 'react-router-dom'
-import { api } from '@/lib/api'
-import { clearSession, getCurrentUser, getRefreshToken } from '@/lib/auth'
+import type { LucideIcon } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { AppShell } from '@/components/shell'
+import { NAV } from '@/components/shell/nav'
+import { getCurrentUser } from '@/lib/auth'
+import { cn } from '@/lib/cn'
 
 export function Dashboard() {
   const user = getCurrentUser()
-  const navigate = useNavigate()
+  const greeting = greetByHour()
 
-  async function logout() {
-    const refreshToken = getRefreshToken()
-    if (refreshToken) {
-      try {
-        await api.post('/auth/logout', { refreshToken })
-      } catch {
-        // best-effort; clear locally regardless
-      }
-    }
-    clearSession()
-    navigate('/login', { replace: true })
-  }
+  // Skip the Dashboard self-link in the tile grid; otherwise derive from the
+  // single source of truth so adding a NAV entry adds a tile automatically.
+  const tiles = NAV.filter((n) => n.to !== '/dashboard')
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="bg-brand text-white px-4 py-3 flex items-center justify-between">
-        <h1 className="text-lg font-semibold">MyFactoryDesk</h1>
-        <button
-          onClick={logout}
-          className="min-h-[40px] rounded bg-white/10 px-3 py-1 text-sm hover:bg-white/20"
-        >
-          Logout
-        </button>
-      </header>
-      <main className="p-4 space-y-4">
-        <div className="rounded bg-white p-4 shadow-sm">
-          <p className="text-slate-500 text-sm">Signed in as</p>
-          <p className="text-lg font-medium">{user?.name ?? 'Unknown'}</p>
-          <p className="text-xs text-slate-400">{user?.role} · {user?.phone}</p>
-        </div>
-        <nav className="grid grid-cols-2 gap-3">
-          <a href="/employees" className="min-h-tap rounded bg-white p-4 shadow-sm flex items-center justify-center font-medium">
-            Employees
-          </a>
-          <a href="/attendance" className="min-h-tap rounded bg-white p-4 shadow-sm flex items-center justify-center font-medium text-slate-400">
-            Attendance · soon
-          </a>
-          <a href="/advances" className="min-h-tap rounded bg-white p-4 shadow-sm flex items-center justify-center font-medium text-slate-400">
-            Advances · soon
-          </a>
-          <a href="/payroll" className="min-h-tap rounded bg-white p-4 shadow-sm flex items-center justify-center font-medium text-slate-400">
-            Payroll · soon
-          </a>
-        </nav>
-      </main>
-    </div>
+    <AppShell pageTitle="Dashboard">
+      <section className="space-y-1">
+        <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+          Signed in as {user?.role}
+        </p>
+        <h1 className="text-2xl font-semibold text-slate-900">
+          {greeting}, {user?.name?.split(' ')[0] ?? 'there'}
+        </h1>
+        <p className="text-sm text-slate-500">
+          {user?.phone}
+        </p>
+      </section>
+
+      <section className="grid gap-3 sm:grid-cols-2">
+        {tiles.map(({ to, label, icon: Icon, soon }) => (
+          <Tile key={to} to={to} label={label} icon={Icon} soon={soon} />
+        ))}
+      </section>
+    </AppShell>
   )
+}
+
+function Tile({
+  to,
+  label,
+  icon: Icon,
+  soon,
+}: {
+  to: string
+  label: string
+  icon: LucideIcon
+  soon?: boolean
+}) {
+  const className = cn(
+    'flex min-h-tap items-center gap-3 rounded-lg bg-white p-4 shadow-sm ring-1 ring-slate-200/60 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2',
+    soon ? 'cursor-not-allowed opacity-60' : 'hover:ring-slate-300',
+  )
+  const inner = (
+    <>
+      <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand/5 text-brand">
+        <Icon size={20} />
+      </span>
+      <span className="flex-1 text-base font-medium text-slate-900">{label}</span>
+      {soon && (
+        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+          soon
+        </span>
+      )}
+    </>
+  )
+  if (soon) {
+    return (
+      <span className={className} aria-disabled="true">
+        {inner}
+      </span>
+    )
+  }
+  return (
+    <Link to={to} className={className}>
+      {inner}
+    </Link>
+  )
+}
+
+function greetByHour(): string {
+  const h = new Date().getHours()
+  if (h < 12) return 'Good morning'
+  if (h < 17) return 'Good afternoon'
+  return 'Good evening'
 }

@@ -1,9 +1,9 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { CreateEmployeeSchema, type CreateEmployeeInput } from '@myfactorydesk/shared'
-import { AppLayout } from '@/components/AppLayout'
+import { AppShell } from '@/components/shell'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { apiErrorMessage } from '@/lib/error'
@@ -42,10 +42,20 @@ export function NewEmployee() {
   const errors = form.formState.errors
 
   return (
-    <AppLayout title="New employee" back="/employees">
+    <AppShell pageTitle="New employee">
+      <div>
+        <Link
+          to="/employees"
+          className="inline-flex items-center gap-1 text-sm text-slate-600 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 rounded"
+        >
+          ← Employees
+        </Link>
+        <h1 className="mt-1 text-xl font-semibold text-slate-900">New employee</h1>
+      </div>
+
       <form
         onSubmit={form.handleSubmit(onSubmit)}
-        className="space-y-4 rounded bg-white p-4 shadow-sm"
+        className="space-y-4 rounded-lg bg-white p-4 shadow-sm ring-1 ring-slate-200/60"
         noValidate
       >
         <Field label="Name" error={errors.name?.message}>
@@ -122,7 +132,7 @@ export function NewEmployee() {
           </Button>
         </div>
       </form>
-    </AppLayout>
+    </AppShell>
   )
 }
 
