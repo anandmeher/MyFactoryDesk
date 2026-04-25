@@ -166,16 +166,16 @@
 
 ## 13. Payroll Runs (Backend)
 
-- [ ] 13.1 Create `PayrollModule` in `apps/api/src/payroll/`
-- [ ] 13.2 Implement `PayrollService.createDraft(month, year)` — idempotent on `(month, year)`
-- [ ] 13.3 Implement `PayrollService.preview(runId)` — recompute on the fly for DRAFT, return frozen payslips for FINALIZED/PAID
-- [ ] 13.4 Implement `PayrollService.finalize(runId)` — wrap in `prisma.$transaction`: insert payslips with `calculatorVersion` + `inputsJson`, link applied advances, set `isDeducted=true` on fully-applied advances, reschedule carry-forwards (new `Advance` rows with `replacesAdvanceId`), set `status=FINALIZED`, `finalizedAt=now`
-- [ ] 13.5 Implement `PayrollService.markPaid(runId)` — DRAFT→reject, FINALIZED→PAID with `paidAt=now`
-- [ ] 13.6 Implement `PayrollController`: `POST /runs`, `GET /runs`, `GET /runs/:id`, `GET /runs/:id/preview`, `POST /runs/:id/finalize` (OWNER only), `POST /runs/:id/mark-paid` (OWNER, ACCOUNTANT), `GET /payslips/:id`
-- [ ] 13.7 Reject any payslip mutation in non-DRAFT run with `409 RUN_FINALIZED`
-- [ ] 13.8 Reject `finalize` and `markPaid` with `409 INVALID_STATE_TRANSITION` from invalid prior states
-- [ ] 13.9 Add integration tests for: create idempotency, preview reflects updates, finalize atomicity (force-fail mid-transaction), advance carry-forward into next month, mark-paid transitions
-- [ ] 13.10 Verify: end-to-end run for the seeded employees produces correct payslips
+- [x] 13.1 `PayrollModule` at `apps/api/src/payroll/` with `PayrollService`, `PayrollController`, and a separate `PayslipsController` (since `/api/v1/payslips/:id` lives at the top level per the spec). Wired into `AppModule`
+- [x] 13.2 `createDraft({month, year})` — looks up `(year, month)` unique, returns the existing run with `created: false` if found, otherwise creates a DRAFT and returns `created: true`. Controller maps `created` to 201 vs 200
+- [x] 13.3 `preview(runId)` — DRAFT path recomputes via `calculatePayslip()` for every active employee in scope (skipping `notEmployed`); FINALIZED/PAID path returns frozen `Payslip` rows joined with employee. Both shapes match `PayrollPreviewSchema`. Verified live: editing attendance immediately changes the DRAFT preview output
+- [x] 13.4 `finalize(runId)` — single `prisma.$transaction(async tx => …)` that: (1) inserts a Payslip row per live employee with frozen `inputsJson` + `calculatorVersion`, (2) marks every scheduled advance `isDeducted=true` and `payrollRunId=runId`, (3) creates next-month carry-forward `Advance` rows for any non-zero remainders (with `replacesAdvanceId` linking back to the original; `date` anchored to `Date.UTC(nextYear, nextMonth-1, 1)`), (4) updates `PayrollRun.status=FINALIZED` + `finalizedAt`. December rollover handled (`nextMonth(12)` returns next year January)
+- [x] 13.5 `markPaid(runId)` — rejects non-FINALIZED with `409 INVALID_STATE_TRANSITION`; otherwise sets `status=PAID`, `paidAt=now`. Verified DRAFT→409 and PAID→409 (re-call)
+- [x] 13.6 `PayrollController`: `POST /runs` (OWNER, ACCOUNTANT — 201 on create, 200 on idempotent re-call), `GET /runs` (paginated `year DESC, month DESC`), `GET /runs/:id`, `GET /runs/:id/preview`, `POST /runs/:id/finalize` (OWNER), `POST /runs/:id/mark-paid` (OWNER, ACCOUNTANT). `PayslipsController` exposes `GET /payslips/:id`
+- [x] 13.7 Payslip rows have no mutation endpoint (read-only by design for V1) — the spec's `RUN_FINALIZED` guard would only apply to a hypothetical update endpoint we haven't built. The state machine itself prevents any payslip from changing once written: there is literally no path to mutate `Payslip` after `finalize()`
+- [x] 13.8 `INVALID_STATE_TRANSITION` 409 thrown from `finalize` (when status ≠ DRAFT) and `markPaid` (when status ≠ FINALIZED). Both verified live with the exact `{ error.code, error.message }` envelope
+- [ ] 13.9 Integration tests — **deferred** (same as 5.13 / 6.8 / 9.7 / 11.4: supertest config not yet wired). Calculator unit tests (20 passing) cover the math; the manual smoke matrix in 13.10 covers create-idempotency, preview-reflects-updates, finalize state change, mark-paid transitions, and advance-deducted DB linkage. Forced-fail-mid-transaction not exercised
+- [x] 13.10 End-to-end smoke verified (14 curl probes via `/api/v1`): seeded April 2026 attendance for 3 employees (25 PRESENT + 5 HOLIDAY each → all paid for 30 days), added a ₹3000 advance for EMP0 → POST /runs returns 201 DRAFT → idempotent POST returns 200 same id → list shows the run → preview computes 3 payslips live (Ramesh 17000 gross / 3200 ded / 13800 net; Sita 14000/200/13800; Arjun 12000/200/11800; totals 43000/3600/39400) → STAFF finalize 403 → OWNER finalize 200 FINALIZED → re-finalize 409 INVALID_STATE_TRANSITION → frozen preview returns the same 3 payslips (DB-persisted, with non-empty ids) → /payslips/:id returns the full breakdown → mark-paid 200 PAID → re-mark-paid 409 → advance row in DB shows `isDeducted=true` and `payrollRunId=<run>` → mark-paid on a fresh DRAFT (May 2026) → 409
 
 ## 14. Payslip PDF
 

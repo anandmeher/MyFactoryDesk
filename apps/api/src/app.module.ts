@@ -10,6 +10,7 @@ import { CryptoModule } from './common/crypto/crypto.module'
 import { validateEnv } from './config/env.validation'
 import { EmployeesModule } from './employees/employees.module'
 import { HealthModule } from './health/health.module'
+import { PayrollModule } from './payroll/payroll.module'
 import { PrismaModule } from './prisma/prisma.module'
 
 @Module({
@@ -22,6 +23,7 @@ import { PrismaModule } from './prisma/prisma.module'
     EmployeesModule,
     AttendanceModule,
     AdvancesModule,
+    PayrollModule,
   ],
   providers: [
     // Global guards run in order: JWT first (sets req.user), then RolesGuard.
