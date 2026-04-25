@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { DateOnlyString, MoneyString } from './common.js'
+import { DateOnlyString, MoneyString } from './common'
 
 export const CreateAdvanceSchema = z.object({
   employeeId: z.string().min(1),

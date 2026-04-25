@@ -6,18 +6,18 @@ The repository SHALL be organised as a pnpm workspace with `apps/api` (NestJS ba
 #### Scenario: pnpm install resolves all workspaces
 - **WHEN** a developer runs `pnpm install` at the repo root
 - **THEN** dependencies for `apps/api`, `apps/web`, and `packages/shared` install without errors
-- **AND** `@paper-plates/shared` is available as a workspace dependency to both apps
+- **AND** `@myfactorydesk/shared` is available as a workspace dependency to both apps
 
 #### Scenario: pnpm dev runs api and web in parallel
 - **WHEN** a developer runs `pnpm dev` at the repo root
 - **THEN** both `apps/api` (port 3000) and `apps/web` (port 5173) start in parallel and watch for changes
 
 ### Requirement: Local development infrastructure via Docker Compose
-The repository SHALL provide a `docker-compose.yml` that runs PostgreSQL 16 and Redis 7 locally with named volumes for persistence. Postgres SHALL listen on `5432` with database `paperplates`, user `app`, password `app`. Redis SHALL listen on `6379`.
+The repository SHALL provide a `docker-compose.yml` that runs PostgreSQL 16 and Redis 7 locally with named volumes for persistence. Postgres SHALL listen on `5432` with database `myfactorydesk`, user `app`, password `app`. Redis SHALL listen on `6379`.
 
 #### Scenario: docker compose up starts the dev stack
 - **WHEN** a developer runs `docker compose up -d` at the repo root
-- **THEN** Postgres becomes reachable at `postgresql://app:app@localhost:5432/paperplates`
+- **THEN** Postgres becomes reachable at `postgresql://app:app@localhost:5432/myfactorydesk`
 - **AND** Redis becomes reachable at `redis://localhost:6379`
 
 ### Requirement: V1 Prisma schema and first migration
@@ -36,7 +36,7 @@ The repository SHALL provide a `docker-compose.yml` that runs PostgreSQL 16 and 
 `packages/shared` SHALL export Zod schemas for every V1 request and response shape, organised by domain (`employee`, `attendance`, `advance`, `payroll`, `auth`, `common`). Money fields SHALL be `z.string().regex(/^\d+(\.\d{1,2})?$/)`. Date-only fields SHALL be `z.string().regex(/^\d{4}-\d{2}-\d{2}$/)`. The package SHALL be consumable from both `apps/api` (via `nestjs-zod`) and `apps/web` (via `@hookform/resolvers/zod`).
 
 #### Scenario: API and web share the same schema
-- **WHEN** a developer imports `CreateEmployeeSchema` from `@paper-plates/shared` in either `apps/api` or `apps/web`
+- **WHEN** a developer imports `CreateEmployeeSchema` from `@myfactorydesk/shared` in either `apps/api` or `apps/web`
 - **THEN** the same Zod schema instance is used for validation in both apps
 
 ### Requirement: NestJS bootstrap conventions

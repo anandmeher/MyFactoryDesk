@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { PhoneString, Role } from './common.js'
+import { PhoneString, Role } from './common'
 
 export const LoginSchema = z.object({
   phone: PhoneString,

@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { AttendanceStatus, DateOnlyString, MoneyString } from './common.js'
+import { AttendanceStatus, DateOnlyString, MoneyString } from './common'
 
 export const AttendanceMarkSchema = z.object({
   employeeId: z.string().min(1),

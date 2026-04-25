@@ -13,7 +13,7 @@ Read CLAUDE.md to understand the project. Then set up the monorepo skeleton:
 
 1. Create pnpm-workspace.yaml with apps/* and packages/* as workspaces.
 2. Create root package.json with scripts: dev (run api + web in parallel using `pnpm -r --parallel dev`), lint, typecheck, format.
-3. Create docker-compose.yml with services for postgres:16-alpine (port 5432, db `paperplates`, user `app`, password `app`) and redis:7-alpine (port 6379). Use named volumes for persistence.
+3. Create docker-compose.yml with services for postgres:16-alpine (port 5432, db `myfactorydesk`, user `app`, password `app`) and redis:7-alpine (port 6379). Use named volumes for persistence.
 4. Create .gitignore covering node_modules, .env, dist, build, .turbo, *.log, coverage.
 5. Add .editorconfig and .prettierrc (2-space indent, single quotes, no semicolons in TS).
 6. Create empty directories: apps/api, apps/web, packages/shared, docs.
@@ -75,7 +75,7 @@ After writing the schema:
 ```
 Set up packages/shared as a TypeScript package and create Zod schemas for v1 entities.
 
-1. Create packages/shared/package.json (name "@paper-plates/shared", main "src/index.ts", peerDependency on zod).
+1. Create packages/shared/package.json (name "@myfactorydesk/shared", main "src/index.ts", peerDependency on zod).
 2. Create packages/shared/tsconfig.json extending a base config.
 3. In packages/shared/src/, create one file per domain:
    - employee.ts — CreateEmployeeSchema, UpdateEmployeeSchema, EmployeeResponseSchema
@@ -87,7 +87,7 @@ Set up packages/shared as a TypeScript package and create Zod schemas for v1 ent
 4. Money fields: z.string().regex(/^\d+(\.\d{1,2})?$/) with a transform to Decimal on the backend.
 5. Date-only fields: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).
 6. Export everything from src/index.ts.
-7. Add @paper-plates/shared as a workspace dependency in apps/api and apps/web.
+7. Add @myfactorydesk/shared as a workspace dependency in apps/api and apps/web.
 
 Verify: import a schema in apps/api/src/main.ts as a smoke test, then remove the import.
 ```
@@ -105,7 +105,7 @@ Implement the auth module in apps/api per CLAUDE.md §Auth.
    - JwtStrategy + JwtAuthGuard
    - RolesGuard + @Roles() decorator that reads roles from route metadata
    - CurrentUser() param decorator
-2. Validate request bodies with the Zod schemas from @paper-plates/shared via nestjs-zod.
+2. Validate request bodies with the Zod schemas from @myfactorydesk/shared via nestjs-zod.
 3. Hash passwords with bcrypt cost 12.
 4. Return errors in the format: { error: { code, message } }. Use codes like INVALID_CREDENTIALS, TOKEN_EXPIRED, INVALID_TOKEN.
 5. Create a seed script in apps/api/prisma/seed.ts that creates one OWNER user (phone: 9999999999, password: changeme) and 3 sample employees with linked STAFF user accounts.
@@ -131,7 +131,7 @@ Endpoints (all under /api/v1/employees, all require JWT):
 - DELETE /:id — soft delete (sets isActive=false, dateOfLeaving=today). Roles: OWNER only.
 
 Requirements:
-- Validate request bodies with Zod schemas from @paper-plates/shared.
+- Validate request bodies with Zod schemas from @myfactorydesk/shared.
 - PAN and Aadhaar must be encrypted before save (AES-GCM with key from ENCRYPTION_KEY env). Decrypt only when explicitly requested by OWNER role.
 - Money fields stored as Prisma Decimal; serialize as string in responses.
 - Generate empCode automatically if not provided: format `EMP{YYYY}{4-digit-sequence}`, e.g., `EMP20260001`.
@@ -150,7 +150,7 @@ Scaffold apps/web as a Vite + React + TypeScript PWA.
 1. `cd apps/web && pnpm create vite@latest . -- --template react-ts` (use current dir).
 2. Install: react-router-dom, @tanstack/react-query, @tanstack/react-query-devtools, react-hook-form, @hookform/resolvers, zod, axios, date-fns, date-fns-tz, decimal.js, lucide-react, tailwindcss, @vitejs/plugin-pwa, vite-plugin-pwa, workbox-window, clsx, tailwind-merge.
 3. Set up Tailwind CSS per official Vite guide; configure for mobile-first (default breakpoints fine).
-4. Configure vite-plugin-pwa with: name "Paper Plates", short_name "PaperPlates", theme_color "#1f2937", background_color "#ffffff", display "standalone", icons (use placeholders for now, real icons later).
+4. Configure vite-plugin-pwa with: name "MyFactoryDesk", short_name "MyFactoryDesk", theme_color "#1f2937", background_color "#ffffff", display "standalone", icons (use placeholders for now, real icons later).
 5. Install shadcn/ui CLI and initialize with the slate theme: `pnpm dlx shadcn@latest init`.
 6. Add components: button, input, label, card, table, dialog, form, select, toast, badge, skeleton.
 7. Create:
@@ -180,7 +180,7 @@ Routes:
 
 Requirements:
 - Use TanStack Query for all server state. Hooks live in src/features/employees/hooks/.
-- Forms use React Hook Form + Zod schemas from @paper-plates/shared.
+- Forms use React Hook Form + Zod schemas from @myfactorydesk/shared.
 - Money inputs: enter as decimal string, format with Intl.NumberFormat 'en-IN' for display.
 - Show loading skeletons, error states with retry, empty states with CTAs.
 - All screens must work on a 360x800 viewport (test in Chrome DevTools mobile mode).

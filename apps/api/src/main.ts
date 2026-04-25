@@ -23,7 +23,7 @@ async function bootstrap(): Promise<void> {
   })
 
   const swaggerConfig = new DocumentBuilder()
-    .setTitle('Paper Plates API')
+    .setTitle('MyFactoryDesk API')
     .setDescription('Staff & Payroll v1 API')
     .setVersion('0.0.0')
     .addBearerAuth()

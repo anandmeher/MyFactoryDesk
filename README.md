@@ -1,4 +1,4 @@
-# Paper Plates Manufacturing & Sales
+# MyFactoryDesk Manufacturing & Sales
 
 Multi-location, mobile-first business management app for a paper plates manufacturing and sales business.
 
@@ -28,8 +28,8 @@ See [`CLAUDE.md`](./CLAUDE.md) for the full project plan and conventions.
 
 ```bash
 # 1. Clone and install
-git clone <your-repo-url> paper-plates
-cd paper-plates
+git clone <your-repo-url> myfactorydesk
+cd myfactorydesk
 pnpm install
 
 # 2. Start Postgres + Redis
@@ -74,7 +74,7 @@ pnpm typecheck                        # tsc --noEmit on all packages
 ## Project Structure
 
 ```
-paper-plates/
+myfactorydesk/
 ├── apps/
 │   ├── api/                  # NestJS backend
 │   │   ├── prisma/

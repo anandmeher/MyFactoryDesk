@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { MoneyString, PayrollStatus } from './common.js'
+import { MoneyString, PayrollStatus } from './common'
 
 export const CreatePayrollRunSchema = z.object({
   month: z.coerce.number().int().min(1).max(12),

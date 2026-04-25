@@ -94,7 +94,7 @@ Currently the repo contains only documentation (`CLAUDE.md`, `README.md`, `PAYRO
 **Alternatives:** Material UI / Chakra (heavier, less customizable for "thumb-sized buttons"), Next.js (overkill — no SSR/SEO need for an internal tool), Capacitor wrapper (premature; PWA install covers V1).
 
 ### D12. Single source of truth for shapes is `packages/shared`
-**Choice:** Every Zod schema lives in `@paper-plates/shared`. The API uses `nestjs-zod` to validate; the web uses `@hookform/resolvers/zod` and `axios` typed off `z.infer<>`. Money is `z.string().regex(/^\d+(\.\d{1,2})?$/)`; date-only is `z.string().regex(/^\d{4}-\d{2}-\d{2}$/)`.
+**Choice:** Every Zod schema lives in `@myfactorydesk/shared`. The API uses `nestjs-zod` to validate; the web uses `@hookform/resolvers/zod` and `axios` typed off `z.infer<>`. Money is `z.string().regex(/^\d+(\.\d{1,2})?$/)`; date-only is `z.string().regex(/^\d{4}-\d{2}-\d{2}$/)`.
 **Why:** Prevents the classic "frontend says one shape, backend rejects with 400" drift. Money-as-string at the wire boundary avoids JS float bugs.
 **Alternatives:** OpenAPI-driven codegen (slower iteration), TypeScript-only shared types (no runtime validation).
 
