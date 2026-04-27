@@ -1,0 +1,66 @@
+# Render Blueprint for MyFactoryDesk staging.
+# Apply with: `render blueprint launch` (Render dashboard → Blueprints → New).
+#
+# What this provisions:
+#   - api      : NestJS service built from apps/api/Dockerfile
+#   - postgres : managed Postgres 16
+#   - redis    : managed Redis (BullMQ jobs — payroll runs, PDF generation queue)
+#
+# What you do manually after first deploy:
+#   1. Set the *_SECRET, ENCRYPTION_KEY, COMPANY_NAME, COMPANY_ADDRESS env vars
+#      in the Render dashboard (marked sync: false below).
+#   2. Update CORS_ORIGIN with your Vercel staging URL.
+
+databases:
+  - name: myfactorydesk-db
+    databaseName: myfactorydesk
+    user: app
+    plan: basic-256mb
+    postgresMajorVersion: 16
+
+services:
+  - type: redis
+    name: myfactorydesk-redis
+    plan: free
+    ipAllowList: []  # only services in this Render account can connect
+
+  - type: web
+    name: myfactorydesk-api
+    runtime: docker
+    region: singapore
+    plan: starter
+    rootDir: .
+    dockerfilePath: ./apps/api/Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/v1/health
+    preDeployCommand: cd /app/apps/api && pnpm prisma migrate deploy
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: DATABASE_URL
+        fromDatabase:
+          name: myfactorydesk-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: myfactorydesk-redis
+          type: redis
+          property: connectionString
+      - key: JWT_ACCESS_SECRET
+        sync: false  # generate with `openssl rand -hex 32`
+      - key: JWT_REFRESH_SECRET
+        sync: false
+      - key: ENCRYPTION_KEY
+        sync: false  # 32-byte hex (64 chars)
+      - key: JWT_ACCESS_TTL
+        value: 15m
+      - key: JWT_REFRESH_TTL
+        value: 7d
+      - key: CORS_ORIGIN
+        sync: false  # set to your Vercel staging URL, comma-separated if multiple
+      - key: COMPANY_NAME
+        sync: false
+      - key: COMPANY_ADDRESS
+        sync: false  # pipe-separated lines, e.g. "Plot 7, MIDC|Pune, MH 411019"

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { AppShell } from '@/components/shell'
 import { Button } from '@/components/ui/Button'
@@ -6,6 +7,7 @@ import { Skeleton } from '@/components/ui/Skeleton'
 import { apiErrorMessage } from '@/lib/error'
 import { formatINR } from '@/lib/format'
 import { useEmployee } from '@/features/employees/hooks/useEmployees'
+import { getPayslipPdf } from './api'
 import { usePayslip } from './hooks/usePayroll'
 
 const MONTH_NAMES = [
@@ -13,12 +15,12 @@ const MONTH_NAMES = [
   'July', 'August', 'September', 'October', 'November', 'December',
 ]
 
-const PDF_BASE = (import.meta.env.VITE_API_URL ?? 'http://localhost:3030/api/v1').replace(/\/$/, '')
-
 export function PayslipDetail() {
   const { id = '' } = useParams<{ id: string }>()
   const query = usePayslip(id)
   const employeeQuery = useEmployee(query.data?.employeeId)
+  const [downloading, setDownloading] = useState(false)
+  const [downloadError, setDownloadError] = useState<string | null>(null)
 
   if (query.isLoading) {
     return (
@@ -44,11 +46,32 @@ export function PayslipDetail() {
   const monthName = MONTH_NAMES[(extractMonthFromCalculatedAt(p) ?? 1) - 1]
   const period = monthYearFromInputs(p) ?? p.calculatedAt.slice(0, 10)
 
-  const pdfUrl = `${PDF_BASE}/payslips/${p.id}/pdf`
   const waText = encodeURIComponent(
-    `Hi ${p.employeeName}, your payslip for ${period} (Net ${formatINR(p.netPay)}): ${pdfUrl}`,
+    `Hi ${p.employeeName}, your payslip for ${period}: Net ${formatINR(p.netPay)}.`,
   )
   const waHref = phone ? `https://wa.me/91${phone}?text=${waText}` : null
+
+  async function handleDownload() {
+    if (downloading) return
+    setDownloadError(null)
+    setDownloading(true)
+    try {
+      const { blob, filename } = await getPayslipPdf(p.id)
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = filename
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      // Revoke after the click event has flushed.
+      setTimeout(() => URL.revokeObjectURL(url), 0)
+    } catch (err) {
+      setDownloadError(apiErrorMessage(err))
+    } finally {
+      setDownloading(false)
+    }
+  }
 
   return (
     <AppShell pageTitle="Payslip">
@@ -116,14 +139,15 @@ export function PayslipDetail() {
       )}
 
       <div className="flex flex-col gap-2 sm:flex-row">
-        <a
-          href={pdfUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex min-h-tap flex-1 items-center justify-center rounded bg-brand px-4 py-3 text-base font-medium text-white hover:bg-slate-700"
+        <Button
+          type="button"
+          size="tap"
+          onClick={handleDownload}
+          disabled={downloading}
+          className="flex-1"
         >
-          Download PDF
-        </a>
+          {downloading ? 'Preparing PDF…' : 'Download PDF'}
+        </Button>
         {waHref && (
           <a
             href={waHref}
@@ -135,6 +159,11 @@ export function PayslipDetail() {
           </a>
         )}
       </div>
+      {downloadError && (
+        <p className="text-sm text-rose-600" role="alert">
+          {downloadError}
+        </p>
+      )}
     </AppShell>
   )
 }

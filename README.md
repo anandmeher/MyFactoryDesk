@@ -126,12 +126,52 @@ myfactorydesk/
 
 ## Deployment
 
-- **Backend + DB:** Railway (one project with Postgres + Redis + API services)
-- **Frontend:** Vercel (auto-deploy from main branch)
-- **Domain + HTTPS:** Cloudflare (free tier)
-- **PDFs / photos (later):** Cloudflare R2
+The repo ships with deploy configs for **Render** (API + Postgres + Redis) and **Vercel** (web). Pick a staging URL on each before you start — they go in env vars.
 
-CI/CD: GitHub Actions runs lint + typecheck + tests on every PR. Main branch auto-deploys to staging.
+### Backend → Render
+
+1. Push the repo to GitHub.
+2. In Render dashboard → **Blueprints → New** → point at this repo. Render reads [`render.yaml`](./render.yaml) and provisions:
+   - `myfactorydesk-api` — Docker web service built from [`apps/api/Dockerfile`](./apps/api/Dockerfile) (NestJS + Puppeteer + Chromium libs).
+   - `myfactorydesk-db` — managed Postgres 16.
+   - `myfactorydesk-redis` — managed Redis (BullMQ).
+3. After the first build, fill the secrets marked `sync: false` in `render.yaml`:
+   ```
+   JWT_ACCESS_SECRET   # openssl rand -hex 32
+   JWT_REFRESH_SECRET  # openssl rand -hex 32
+   ENCRYPTION_KEY      # openssl rand -hex 32  (must be 64 hex chars)
+   CORS_ORIGIN         # https://<your-vercel-url>  (comma-separated if multiple)
+   COMPANY_NAME        # appears on payslip PDF header
+   COMPANY_ADDRESS     # pipe-separated lines, e.g. "Plot 7, MIDC|Pune, MH 411019"
+   ```
+4. Trigger a redeploy. The `preDeployCommand` runs `prisma migrate deploy` automatically.
+5. Health check: `GET https://<your-render-url>/api/v1/health`.
+
+### Frontend → Vercel
+
+1. Vercel dashboard → **Add New Project** → import the repo.
+2. **Root directory:** `apps/web`. Vercel reads [`apps/web/vercel.json`](./apps/web/vercel.json) for the build command and SPA rewrites.
+3. Set env var `VITE_API_URL=https://<your-render-url>/api/v1`.
+4. Deploy. Open the URL on a phone — install as PWA from the browser menu.
+
+### Local Docker build (sanity check)
+
+```bash
+# Build the api image from the repo root
+docker build -f apps/api/Dockerfile -t myfactorydesk-api .
+
+# Run it against the local Compose Postgres/Redis (host networking)
+docker run --rm --network host \
+  -e DATABASE_URL=postgresql://app:app@localhost:5433/myfactorydesk \
+  -e REDIS_URL=redis://localhost:6380 \
+  -e JWT_ACCESS_SECRET=$(openssl rand -hex 32) \
+  -e JWT_REFRESH_SECRET=$(openssl rand -hex 32) \
+  -e ENCRYPTION_KEY=$(openssl rand -hex 32) \
+  -e CORS_ORIGIN=http://localhost:5173 \
+  myfactorydesk-api
+```
+
+CI/CD: GitHub Actions runs lint + typecheck + tests on every PR (TODO — workflow not yet committed). Render and Vercel both auto-deploy on push to `main`.
 
 ## Things to Read Before Coding
 
