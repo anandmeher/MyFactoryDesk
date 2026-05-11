@@ -17,6 +17,12 @@ const EnvSchema = z.object({
     .regex(/^[0-9a-fA-F]{64}$/, 'ENCRYPTION_KEY must be 64 hex chars (32 bytes)'),
 
   CORS_ORIGIN: z.string().default('http://localhost:5173'),
+
+  // Company identity for payslip PDFs. v1 has no Organization model — these
+  // env vars are the single source of truth. Address lines are pipe-separated
+  // (`|`) since commas occur inside addresses.
+  COMPANY_NAME: z.string().min(1).default('MyFactoryDesk'),
+  COMPANY_ADDRESS: z.string().default(''),
 })
 
 export type Env = z.infer<typeof EnvSchema>

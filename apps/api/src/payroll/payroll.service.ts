@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common'
+import { ConfigService } from '@nestjs/config'
 import {
   Prisma,
   type Advance,
@@ -18,7 +19,10 @@ import type {
 } from '@myfactorydesk/shared'
 import { Decimal as DecimalJs } from 'decimal.js'
 import { PrismaService } from '../prisma/prisma.service'
+import type { Env } from '../config/env.validation'
 import { CALCULATOR_VERSION, calculatePayslip, type PayslipInput, type PayslipOutput } from './calculator'
+import { renderPayslipHtml } from './payslip-template'
+import { PdfService } from './pdf.service'
 
 type AdvanceForCalc = { id: string; amount: DecimalJs; date: Date }
 
@@ -29,7 +33,11 @@ type ListResult = {
 
 @Injectable()
 export class PayrollService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly pdf: PdfService,
+    private readonly config: ConfigService<Env, true>,
+  ) {}
 
   // --- runs ----------------------------------------------------------------
 
@@ -272,6 +280,50 @@ export class PayrollService {
       throw new NotFoundException({ code: 'NOT_FOUND', message: `Payslip ${payslipId} not found` })
     }
     return this.frozenPayslipResponse(row, row.employee.empCode, row.employee.name)
+  }
+
+  async renderPayslipPdf(payslipId: string): Promise<{ buffer: Buffer; filename: string }> {
+    const row = await this.prisma.payslip.findUnique({
+      where: { id: payslipId },
+      include: {
+        employee: true,
+        payrollRun: { select: { month: true, year: true, finalizedAt: true } },
+      },
+    })
+    if (!row) {
+      throw new NotFoundException({ code: 'NOT_FOUND', message: `Payslip ${payslipId} not found` })
+    }
+
+    const payslip = this.frozenPayslipResponse(row, row.employee.empCode, row.employee.name)
+    const addressLines = this.config
+      .get('COMPANY_ADDRESS', { infer: true })
+      .split('|')
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0)
+
+    const html = renderPayslipHtml({
+      payslip,
+      run: {
+        month: row.payrollRun.month,
+        year: row.payrollRun.year,
+        finalizedAt: row.payrollRun.finalizedAt ? row.payrollRun.finalizedAt.toISOString() : null,
+      },
+      employee: {
+        empCode: row.employee.empCode,
+        name: row.employee.name,
+        designation: row.employee.designation,
+        dateOfJoining: row.employee.dateOfJoining,
+      },
+      company: {
+        name: this.config.get('COMPANY_NAME', { infer: true }),
+        addressLines,
+      },
+    })
+
+    const buffer = await this.pdf.renderPdf(html)
+    const safeName = row.employee.name.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase()
+    const filename = `payslip-${safeName || row.employee.empCode}-${row.payrollRun.year}-${String(row.payrollRun.month).padStart(2, '0')}.pdf`
+    return { buffer, filename }
   }
 
   // --- helpers -------------------------------------------------------------

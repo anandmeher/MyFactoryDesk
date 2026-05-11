@@ -44,3 +44,11 @@ export async function getPayslip(id: string): Promise<PayslipResponse> {
   const res = await api.get<ApiData<PayslipResponse>>(`/payslips/${id}`)
   return res.data.data
 }
+
+export async function getPayslipPdf(id: string): Promise<{ blob: Blob; filename: string }> {
+  const res = await api.get<Blob>(`/payslips/${id}/pdf`, { responseType: 'blob' })
+  const disposition = res.headers['content-disposition'] ?? ''
+  const match = /filename="?([^";]+)"?/.exec(disposition)
+  const filename = match?.[1] ?? `payslip-${id}.pdf`
+  return { blob: res.data, filename }
+}
