@@ -1,0 +1,52 @@
+name: Deploy staging (laptop)
+
+# Triggered after CI succeeds on main. Runs on the self-hosted runner
+# registered on the laptop — see docs/DEPLOY.md for setup.
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    # Skip when the upstream CI run failed. workflow_dispatch has no
+    # workflow_run payload, so allow it unconditionally.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: [self-hosted, myfactorydesk-laptop]
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      # Migrations run inside the `migrate` compose service (Dockerfile build
+      # stage, has Prisma CLI). `api` only starts after migrate exits 0.
+      - name: Build images and start stack
+        run: docker compose -f docker-compose.prod.yml up -d --build
+
+      - name: Wait for API health
+        run: |
+          set -e
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:3030/api/v1/health > /dev/null; then
+              echo "API healthy"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "API did not become healthy in 60s" >&2
+          docker compose -f docker-compose.prod.yml logs --tail=200 api migrate
+          exit 1
+
+      - name: Prune dangling images
+        if: success()
+        run: docker image prune -f

@@ -1,0 +1,80 @@
+# Production-flavored compose for the self-hosted laptop deployment.
+# Cloudflare Tunnel (running on the host, not in compose) terminates TLS and
+# forwards to the api on 127.0.0.1:3030 — see docs/DEPLOY.md.
+#
+# Usage:
+#   docker compose -f docker-compose.prod.yml up -d --build
+#   docker compose -f docker-compose.prod.yml logs -f api
+#
+# All host ports bind to 127.0.0.1 so nothing leaks onto the LAN.
+# Redis is intentionally absent: no BullMQ workers are wired in v1.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: myfactorydesk-postgres-prod
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-myfactorydesk}
+      POSTGRES_USER: ${POSTGRES_USER:-app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in apps/api/.env.production}
+    volumes:
+      - myfactorydesk_postgres_prod:/var/lib/postgresql/data
+    ports:
+      - '127.0.0.1:5433:5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-app} -d ${POSTGRES_DB:-myfactorydesk}']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # One-shot service: applies pending Prisma migrations, then exits 0.
+  # Uses the Dockerfile's `build` stage so the Prisma CLI (a devDep) is
+  # available — the runtime stage strips devDeps.
+  migrate:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: build
+    image: myfactorydesk-api-migrate:latest
+    container_name: myfactorydesk-migrate
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - apps/api/.env.production
+    working_dir: /repo
+    command: ['pnpm', '--filter', '@myfactorydesk/api', 'exec', 'prisma', 'migrate', 'deploy']
+    restart: 'no'
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    image: myfactorydesk-api:latest
+    container_name: myfactorydesk-api-prod
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    env_file:
+      - apps/api/.env.production
+    # Container listens on 3000 (per apps/api/Dockerfile). Map to 3030 on the
+    # host to match local dev convention and avoid clashing with anything on 3000.
+    ports:
+      - '127.0.0.1:3030:3000'
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - require('node:http').get('http://127.0.0.1:3000/api/v1/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+volumes:
+  myfactorydesk_postgres_prod:

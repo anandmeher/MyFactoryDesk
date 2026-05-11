@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        env:
+          # Match the api Dockerfile — Puppeteer's bundled Chromium isn't needed
+          # for typecheck/build and downloading it would slow CI for no benefit.
+          PUPPETEER_SKIP_DOWNLOAD: 'true'
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm --filter @myfactorydesk/api prisma:generate
+
+      - name: Validate Prisma schema
+        run: pnpm --filter @myfactorydesk/api exec prisma validate
+
+      # @myfactorydesk/shared exports its types from `dist/cjs/index.d.ts`,
+      # so it must be built before any consumer can typecheck against it.
+      - name: Build shared
+        run: pnpm --filter @myfactorydesk/shared build
+
+      - name: Typecheck (all workspaces)
+        run: pnpm -r typecheck
+
+      - name: Build (api + web)
+        run: pnpm --filter '!@myfactorydesk/shared' -r build
+
+      # `--if-present` skips packages whose `test` script is missing. The
+      # placeholder echo scripts in web/shared exit 0; the api Jest suite runs.
+      - name: Test (where defined)
+        run: pnpm -r test --if-present

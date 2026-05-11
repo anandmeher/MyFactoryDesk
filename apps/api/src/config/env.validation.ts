@@ -5,7 +5,9 @@ const EnvSchema = z.object({
   PORT: z.coerce.number().int().positive().default(3000),
 
   DATABASE_URL: z.string().url(),
-  REDIS_URL: z.string().url(),
+  // Optional in v1: no BullMQ workers are wired yet, so the laptop self-host
+  // deploy can omit Redis. Validate only when provided.
+  REDIS_URL: z.string().url().optional(),
 
   JWT_ACCESS_SECRET: z.string().min(32, 'JWT_ACCESS_SECRET must be at least 32 chars (use `openssl rand -hex 32`)'),
   JWT_REFRESH_SECRET: z.string().min(32, 'JWT_REFRESH_SECRET must be at least 32 chars'),
