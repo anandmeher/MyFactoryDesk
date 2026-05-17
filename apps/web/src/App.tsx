@@ -20,6 +20,7 @@ import { Login } from '@/routes/Login'
 import { Placeholder } from '@/routes/Placeholder'
 import { PreviewShell } from '@/routes/preview/PreviewShell'
 import { PreviewShellWithList } from '@/routes/preview/PreviewShellWithList'
+import { UxRedesign } from '@/routes/preview/UxRedesign'
 import { RequireAuth } from '@/routes/RequireAuth'
 
 export function App() {
@@ -153,6 +154,14 @@ export function App() {
             element={
               <RequireAuth>
                 <PreviewShellWithList />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/preview/ux-redesign"
+            element={
+              <RequireAuth>
+                <UxRedesign />
               </RequireAuth>
             }
           />
